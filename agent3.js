@@ -25,7 +25,7 @@ const radius_distance = 3
 const min_reward = 15
 
 client.onAgentsSensing( (agents) => {
-    console.log("Agents:",agents)
+    //console.log("Agents:",agents)
 } )
 client.onMap((width, height, tiles) => {
     mapX = width;
@@ -39,8 +39,8 @@ client.onMap((width, height, tiles) => {
         }
     });
     graph = new astar.Graph(map);
-    console.log(graph.toString())
-    console.log("graphs: ",graph)
+    //console.log(graph.toString())
+    //console.log("graphs: ",graph)
 
 });
 // client.onMap( ( x, y, delivery ) => {
@@ -65,7 +65,7 @@ client.onParcelsSensing( async ( perceived_parcels ) => {
 client.onConfig( (config) => {
     believes.config = config
     believes.config.rewardDecayRatio = config.MOVEMENT_DURATION/(config.PARCEL_DECADING_INTERVAL.split("s")[0] *1000) //cost of moving one step
-    console.log("CONFIG:",believes.config)
+    //console.log("CONFIG:",believes.config)
     //random agent speed will be needed for calculate how many times to retry the same path when blocked
 })
 
@@ -123,7 +123,7 @@ while (true){
             const parcels = believes.parcels
                 .filter(p=>p.carriedBy!=believes.me.id)
                 .sort( (a,b) => a.distance - b.distance )
-                console.log(parcels)
+                //console.log(parcels)
             if(parcels.length!=0  && (parcels[0].reward-parcels[0].distance*believes.config.rewardDecayRatio)>min_reward) //find the right tradeoff between distance and reward parcels[0].distance < radius_distance
                 intentions.push({type: actions.pick_parcel, target: parcels[0]}) //need more reasoning for the condition such as other agents, maybe also the distance
                 //for instance if there are othere near agentfrom the parcels and i already have a packet i won't go for it, since i might loose time and parcels drop in reward
@@ -148,7 +148,7 @@ while (true){
 
     //execute the action
     if(intentions.length>0){
-        console.log("action")
+        console.log("doing action")
         let intention = intentions[0]
         console.log("Intentions",intention)
         if(intention.type == actions.pick_parcel){
@@ -159,10 +159,11 @@ while (true){
             else{
                 
                 while(believes.me.x!=intention.target.x || believes.me.y!=intention.target.y){
-                    console.log("PARCEL intention:",intention.target.id,"Parcels availabe:",believes.parcels)
-                    console.log("Moving to parcel")
-                    console.log("Me 1:",believes.me)
+                    //console.log("PARCEL intention:",intention.target.id,"Parcels availabe:",believes.parcels)
+                    //console.log("Moving to parcel")
+                    //console.log("Me 1:",believes.me)
                     let status,failed_movemets=0
+                    let stopAction = false
                     let {me} = believes
                     let current_pos = graph.grid[Math.round(me.x)][Math.round(me.y)];
                     let parcel_node = graph.grid[intention.target.x][intention.target.y];
@@ -192,16 +193,21 @@ while (true){
                         //     parcel_node = graph.grid[intention.target.x][intention.target.y];
                         //     result = astar.astar.search(graph, current_pos, parcel_node, {diagonal: false});
                         // }
-                            
-                        if(!believes.parcels.some(p=>p.id==intention.target.id)){
+                        console.log("PACCHI PRESI",believes.parcels)
+                        if(!believes.parcels.some(p=>(p.id==intention.target.id)) ){
+                            console.log("NON C'E' PIU' IL PACCO CHE STO CERCANDO")
                             intentions.shift()
+                            stopAction = true
                             break
                         }
+                        
                     }
                     // if(believes.me.x!=intention.target.x)
                     //     status = await client.move(intention.target.x>believes.me.x?'right':'left')
                     // if(believes.me.y!=intention.target.y)
                     //     status = await client.move(intention.target.y<believes.me.y?'down':'up')
+                    if(stopAction)
+                        break
                 console.log("Me 2:",believes.me)
                 }
                 await client.pickup()
