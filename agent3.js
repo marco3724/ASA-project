@@ -2,9 +2,9 @@ import { DeliverooApi } from "@unitn-asa/deliveroo-js-client";
 import {distance,nearestDelivery} from "./utility.js"
 import * as astar from "./astar.js"
 const client = new DeliverooApi(
-    'http://localhost:8080',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjA5ZmQ2NDllNzZlIiwibmFtZSI6Im1hcmNvIiwiaWF0IjoxNjc5OTk3Njg2fQ.6_zmgL_C_9QgoOX923ESvrv2i2_1bgL_cWjMw4M7ah4'
-)
+    "http://cuwu.ddns.net:8082/",
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjEyYjJmZDEyMDUyIiwibmFtZSI6ImNpcm8iLCJpYXQiOjE3MTUwNjU0NjN9.2Fa4Ulmt2AVC4Rier1kiIvzAvigesIwBqg1dRinb3bY'
+  );
 
 //BELIEVES 
 //parcel { id: 'p283', x: 4, y: 4, carriedBy: null, reward: 23 }
@@ -53,8 +53,8 @@ client.onMap((width, height, tiles) => {
 client.onYou( ( {id, name, x, y, score} ) => {
     believes.me.id = id
     believes.me.name = name
-    believes.me.x = Math.round(x)
-    believes.me.y = Math.round(y)
+    believes.me.x = Math.floor(x)
+    believes.me.y = Math.floor(y)
     believes.me.score = score
 } )
 
@@ -78,35 +78,40 @@ const actions ={
     move_to: 'move_to'
 }
 const intentions = []
-let failRandom
+let failRandom = 0
 while (true){
     //move randomly if there are no parcels sensed or a plan is not defined
     if(believes.parcels.length==0 && intentions.length==0){
-        // let dir = []
+        let dir = []
         // console.log("Random move")
-        // if(map){
-        //     if(believes.me.y!=mapY){
-        //         if( map[believes.me.x][believes.me.y+1]==1)
-        //             dir.push('up')
-        //         if(map[believes.me.x][believes.me.y-1]==1)
-        //             dir.push('down')
-        //     }
-        //     if(believes.me.x!=mapX){
-        //         if(map[believes.me.x-1][believes.me.y]==1)
-        //             dir.push('left')
-        //         if(map[believes.me.x+1][believes.me.y]==1)
-        //             dir.push('right')
-        //     }
-    
-        // }
-
+        if(map){
+                if(Math.ceil(believes.me.y)<mapY-1 && map[believes.me.x][believes.me.y+1]==1)
+                    dir.push('up')
+                if(Math.floor(believes.me.y)>0 && map[believes.me.x][believes.me.y-1]==1)
+                    dir.push('down')
+                if(Math.floor(believes.me.x)>0 && map[believes.me.x-1][believes.me.y]==1)
+                    dir.push('left')
+                if(Math.ceil(believes.me.x)<mapX-1 && map[believes.me.x+1][believes.me.y]==1)
+                    dir.push('right')
+            }
+         else{
+            dir = ['up','down','left','right']
+         }
+        
         // dir = dir[Math.floor(Math.random()*dir.length)] || "right"
         console.log("Random move")
-        let dir = ['up','down','left','right'][Math.floor(Math.random()*4)]
-        let status =await client.move(dir)
+        //markov chain for random movement
+        let direction = dir[Math.floor(Math.random()*dir.length)]
+        let status =await client.move(direction)
+        console.log(direction)
         if(!status){
             failRandom++
+
             console.log("Random move status:",status,"In total: ",failRandom)
+        }else{
+            
+            believes.me.x = Math.floor( status.x)
+            believes.me.y = Math.floor(status.y)
         }
         
 
@@ -122,7 +127,7 @@ while (true){
         if(believes.parcels.some(p=>p.carriedBy==believes.me.id)){
             const parcels = believes.parcels
                 .filter(p=>p.carriedBy!=believes.me.id)
-                .sort( (a,b) => a.distance - b.distance )
+                .sort((a,b) => a.distance - b.distance)
                 //console.log(parcels)
             if(parcels.length!=0  && (parcels[0].reward-parcels[0].distance*believes.config.rewardDecayRatio)>min_reward) //find the right tradeoff between distance and reward parcels[0].distance < radius_distance
                 intentions.push({type: actions.pick_parcel, target: parcels[0]}) //need more reasoning for the condition such as other agents, maybe also the distance
@@ -173,7 +178,6 @@ while (true){
                         status = await client.move(direction)
                         console.log("MOVEMENTS status:",status)
                         if(status){ 
-                            
                             believes.me.x = status.x
                             believes.me.y = status.y
                         }
@@ -194,11 +198,14 @@ while (true){
                         //     result = astar.astar.search(graph, current_pos, parcel_node, {diagonal: false});
                         // }
                         console.log("PACCHI PRESI",believes.parcels)
-                        if(!believes.parcels.some(p=>(p.id==intention.target.id)) ){
-                            console.log("NON C'E' PIU' IL PACCO CHE STO CERCANDO")
-                            intentions.shift()
-                            stopAction = true
-                            break
+                        if(!believes.parcels.some(p=>(p.id==intention.target.id) ) ){
+                            if(result.length-i<4){//se il pacco non c'e piu e sono molto vicino  allora lo toglo, altrimenti se il pacco non ce piu ma sono lontano voglio provcare a raggiungerlo 
+                                console.log("NON C'E' PIU' IL PACCO CHE STO CERCANDO")
+                                intentions.shift()
+                                stopAction = true
+                                break
+                            }
+                           
                         }
                         
                     }
@@ -238,20 +245,27 @@ while (true){
                             believes.me.y = status.y
                         }
                         else{
+                            console.log("Failed movements AAAAAAAAAAAa")
                             i--
                             failed_movemets++
                         }
                             
-                        // if(failed_movemets>10){
-                        //         console.log("Failed movements")
-                        //         i = 0
-                        //         intentions.shift()
-                        //         intentions.push({type: actions.deliver_parcel, target: believes.deliveryPoints.sort( (a,b) => distance(believes.me,a) - distance(believes.me,b) )[1]})//we are finding the nearest delivery point not the a star algoritmW
+                        if(failed_movemets>20){
+                                failed_movemets = 0
+                                console.log("Recalculating path to delivery point")
+                                i = 0
+                                let delpoints = believes.deliveryPoints.filter(d=>d.x!=intention.target.x && d.y!=intention.target.y)
+                                console.log("DEL POINTS",delpoints)
+                                intentions.shift()
+                                intentions.push({type: actions.deliver_parcel, target: delpoints.sort( (a,b) => distance(believes.me,a) - distance(believes.me,b) )[0]})//we are finding the nearest delivery point not the a star algoritmW
+                                intention = intentions[0]
+                            
+                                current_pos = graph.grid[Math.round(me.x)][Math.round(me.y)];
+                                parcel_node = graph.grid[intention.target.x][intention.target.y];
+                               
+                                result = astar.astar.search(graph, current_pos, parcel_node, {diagonal: false});
                                 
-                        //         current_pos = graph.grid[Math.round(me.x)][Math.round(me.y)];
-                        //         parcel_node = graph.grid[intention.target.x][intention.target.y];
-                        //         result = astar.astar.search(graph, current_pos, parcel_node, {diagonal: false});
-                        // }
+                        }
                         if(!believes.parcels.some(p=>p.carriedBy==believes.me.id)){
                             console.log("SHIFTING INTENTION, PARCELS I WAS CARRYING IS GONE")
                             noCarrying = true
