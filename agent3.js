@@ -2,8 +2,8 @@ import { DeliverooApi } from "@unitn-asa/deliveroo-js-client";
 import {distance,nearestDelivery} from "./utility.js"
 import * as astar from "./astar.js"
 const client = new DeliverooApi(
-    "http://cuwu.ddns.net:8082/",
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjEyYjJmZDEyMDUyIiwibmFtZSI6ImNpcm8iLCJpYXQiOjE3MTUwNjU0NjN9.2Fa4Ulmt2AVC4Rier1kiIvzAvigesIwBqg1dRinb3bY'
+    "http://localhost:8080/",
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjcyZDI4M2VlMjU3IiwibmFtZSI6ImNpYW8iLCJpYXQiOjE3MTUxNjA5NzF9.me_Fvg-V48fiYGQLPVJtShxX6kjNkiMAo2E2qjdXw-8'
   );
 
 //BELIEVES 
@@ -14,7 +14,7 @@ const believes = {
     parcels: [],
     deliveryPoints: [],
     me: {},
-    agentsPosition: []
+    agentsPosition: new Map()
     //semsing of other players
 }
 let graph
@@ -22,10 +22,16 @@ let map
 let mapX 
 let mapY 
 const radius_distance = 3
-const min_reward = 15
+let min_reward = 15
 
 client.onAgentsSensing( (agents) => {
-    //console.log("Agents:",agents)
+    agents.forEach(agents =>{
+    believes.agentsPosition.has(agents.id) ? 
+        believes.agentsPosition.set(agents.id, {x:agents.x,y:agents.y,score:agents.score}) //add an array to have an history (is it necessary?)
+        : 
+        believes.agentsPosition.set(agents.id, {x:agents.x,y:agents.y,score:agents.score})
+    })
+    console.log("Agents:",believes.agentsPosition)
 } )
 client.onMap((width, height, tiles) => {
     mapX = width;
@@ -60,11 +66,15 @@ client.onYou( ( {id, name, x, y, score} ) => {
 
 
 client.onParcelsSensing( async ( perceived_parcels ) => {
-    believes.parcels = perceived_parcels.filter( p => p.carriedBy == null || p.carriedBy== believes.me.id ).map(p=> {return {...p,distance: distance(believes.me,p)}})
+    believes.parcels = perceived_parcels.filter( p => p.carriedBy == null || p.carriedBy== believes.me.id ).map(p=> {return {...p,x:Math.round(p.x),y:Math.round(p.y),distance: distance(believes.me,p)}})
 } )
 client.onConfig( (config) => {
     believes.config = config
-    believes.config.rewardDecayRatio = config.MOVEMENT_DURATION/(config.PARCEL_DECADING_INTERVAL.split("s")[0] *1000) //cost of moving one step
+    believes.config.rewardDecayRatio = 0
+    if(believes.config.PARCEL_DECADING_INTERVAL=="infinite")
+        min_reward = 0
+    else
+        believes.config.rewardDecayRatio = config.MOVEMENT_DURATION/(config.PARCEL_DECADING_INTERVAL.split("s")[0] *1000) //cost of moving one step
     //console.log("CONFIG:",believes.config)
     //random agent speed will be needed for calculate how many times to retry the same path when blocked
 })
@@ -79,37 +89,60 @@ const actions ={
 }
 const intentions = []
 let failRandom = 0
+let previousDirection =""
 while (true){
     //move randomly if there are no parcels sensed or a plan is not defined
     if(believes.parcels.length==0 && intentions.length==0){
         let dir = []
+       
         // console.log("Random move")
         if(map){
-                if(Math.ceil(believes.me.y)<mapY-1 && map[believes.me.x][believes.me.y+1]==1)
+                if(Math.ceil(believes.me.y)<mapY-1 && map[believes.me.x][believes.me.y+1]==1 && previousDirection !== 'down')
                     dir.push('up')
-                if(Math.floor(believes.me.y)>0 && map[believes.me.x][believes.me.y-1]==1)
+                if(Math.floor(believes.me.y)>0 && map[believes.me.x][believes.me.y-1]==1 && previousDirection !== 'up')
                     dir.push('down')
-                if(Math.floor(believes.me.x)>0 && map[believes.me.x-1][believes.me.y]==1)
+                if(Math.floor(believes.me.x)>0 && map[believes.me.x-1][believes.me.y]==1 && previousDirection !== 'right')
                     dir.push('left')
-                if(Math.ceil(believes.me.x)<mapX-1 && map[believes.me.x+1][believes.me.y]==1)
+                if(Math.ceil(believes.me.x)<mapX-1 && map[believes.me.x+1][believes.me.y]==1 && previousDirection !== 'left')
                     dir.push('right')
+                if(dir.length==0){
+                    if(Math.ceil(believes.me.y)<mapY-1 && map[believes.me.x][believes.me.y+1]==1 )
+                        dir.push('up')
+                    if(Math.floor(believes.me.y)>0 && map[believes.me.x][believes.me.y-1]==1 )
+                        dir.push('down')
+                    if(Math.floor(believes.me.x)>0 && map[believes.me.x-1][believes.me.y]==1)
+                        dir.push('left')
+                    if(Math.ceil(believes.me.x)<mapX-1 && map[believes.me.x+1][believes.me.y]==1)
+                        dir.push('right')
+                }
             }
+
          else{
             dir = ['up','down','left','right']
          }
-        
+        //  if (previousDirection && dir.includes(previousDirection)) {
+        //     // for(let i = 0; i<10;i++){
+        //     //     dir.push(previousDirection);
+        //     // }
+           
+        // }
         // dir = dir[Math.floor(Math.random()*dir.length)] || "right"
         console.log("Random move")
+        console.log(dir)
         //markov chain for random movement
         let direction = dir[Math.floor(Math.random()*dir.length)]
         let status =await client.move(direction)
         console.log(direction)
         if(!status){
             failRandom++
-
-            console.log("Random move status:",status,"In total: ",failRandom)
+            if(failRandom>20){
+                failRandom = 0
+                previousDirection =""
+                continue
+            }
+            console.log("failed blind move")
         }else{
-            
+            previousDirection = direction
             believes.me.x = Math.floor( status.x)
             believes.me.y = Math.floor(status.y)
         }
@@ -186,18 +219,25 @@ while (true){
                             failed_movemets++
                             console.log("Failed movements AAAAAAAAAAAa")
                         }
-                            
-                        // if(failed_movemets>10){
-                        //     console.log("Failed movements")
+                            console.log("LA I",i)
+                            //console.log("RESULT",result[i])
+                        // if(failed_movemets>15){
+                        //     console.error("PORBABLY ENCOUNTERED AN AGENT, CHANGE ROUTE")
+                        //     let temporaryMap = map
+                        //     temporaryMap[result[i+1].x][result[i+1].y] = 0
+                        //     let temporaryGraph = new astar.Graph(map); 
+
                         //     i = 0
-                        //     intentions.shift()
-                        //     intentions.push({type: actions.deliver_parcel, target: believes.deliveryPoints.sort( (a,b) => distance(believes.me,a) - distance(believes.me,b) )[1]})//we are finding the nearest delivery point not the a star algoritmW
+                        //     failed_movemets = 0
+                        //     intentions.shift() 
                             
-                        //     current_pos = graph.grid[Math.round(me.x)][Math.round(me.y)];
-                        //     parcel_node = graph.grid[intention.target.x][intention.target.y];
-                        //     result = astar.astar.search(graph, current_pos, parcel_node, {diagonal: false});
+                        //     //changing route
+                        //     current_pos = temporaryGrap.grid[Math.round(believes.me.x )][Math.round(believes.me.y)];
+                        //     parcel_node = temporaryGrap.grid[intention.target.x][intention.target.y];
+                        //     result = astar.astar.search(temporaryGraph, current_pos, parcel_node, {diagonal: false});
+                        //     console.log(result[0].movement)
                         // }
-                        console.log("PACCHI PRESI",believes.parcels)
+                        
                         if(!believes.parcels.some(p=>(p.id==intention.target.id) ) ){
                             if(result.length-i<4){//se il pacco non c'e piu e sono molto vicino  allora lo toglo, altrimenti se il pacco non ce piu ma sono lontano voglio provcare a raggiungerlo 
                                 console.log("NON C'E' PIU' IL PACCO CHE STO CERCANDO")
@@ -300,7 +340,8 @@ EDGE CASES
 - [DONE](christian) need to use a path finding algorithm to move to the target in order to not get stuck in some cases (when the target is reached by one of the two coordinates but not by the other but the othercoordinate is blocked----------------^------------- where that arrow should go)
 
 ENHANCEMENTS
-- try to pick more packet on the way to the delivery point
+- [done]try to pick more packet on the way to the delivery point
+    - calculate the shortest path in picking those packet
 - calculate also the distance between the delivery point and the parcel (currently just calculating the distance between me and the parcel)
 - (?) put more intention and then do a filter (currently directly filtering from the believes)
 - (?) use professor's architecture 
