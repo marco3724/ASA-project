@@ -31,7 +31,7 @@ client.onAgentsSensing( (agents) => {
         : 
         believes.agentsPosition.set(agents.id, {x:agents.x,y:agents.y,score:agents.score})
     })
-    console.log("Agents:",believes.agentsPosition)
+    // console.log("Agents:",believes.agentsPosition)
 } )
 client.onMap((width, height, tiles) => {
     mapX = width;
@@ -130,8 +130,13 @@ while (true){
                 intentions.push({type: actions.pick_parcel, target: parcels[0]}) 
             //if there are no parcels, i want to deliver, we are finding the nearest delivery point not the a star algoritmW
             //TODO: calculate the 3 (n) nearest delivery point, and use the astar to find the real distance
-            else 
-                intentions.push({type: actions.deliver_parcel, target: believes.deliveryPoints.sort( (a,b) => distance(believes.me,a) - distance(believes.me,b) )[0]})
+            else {
+                // sort the delivery points by distance
+                believes.deliveryPoints.sort( (a,b) => distance(believes.me,a) - distance(believes.me,b) );
+                // calculate the 3 nearest delivery point
+                let nearestDeliveryPoints = believes.deliveryPoints.slice(0,3);
+                intentions.push({type: actions.deliver_parcel, target: null, ndp: nearestDeliveryPoints})
+            }
         }else{//if my agent is not carrying anything, i want to pick the nearest parcel 
             // TODO trade off between taking a packer or not, in this case need to be more aggressive
             let option = [] //intention revision (without selecfting multiple intention)
@@ -154,18 +159,18 @@ while (true){
                 intentions.shift()
             }
             else{
-                await moveTo(intention,parcelGone)  
+                await moveTo(intention, parcelGone)  
                 await client.pickup()
                 intentions.shift()
             }
         }
         if(intention.type == actions.deliver_parcel){
-            if(intention.target.distance == 0){
+            if(intention.target != null && intention.target.distance == 0){
                 await client.putdown()
                 intentions.shift()
             }
             else{
-                await moveTo(intention,carryingParcelGone)
+                await moveTo(intention, carryingParcelGone)
                 await client.putdown()
                 intentions.shift()
             }
@@ -203,49 +208,70 @@ function getAvailableDirections(){
 }
 
 async function moveTo(intention,needToStop){
-    while(believes.me.x!=intention.target.x || believes.me.y!=intention.target.y){
-        console.log("Moving towards target",intention.target)
-        let status,failed_movemets=0
-        let {me} = believes
-        let stopAction = false
-        let current_pos = graph.grid[Math.round(me.x)][Math.round(me.y)];
-        let parcel_node = graph.grid[intention.target.x][intention.target.y];
-        let result = astar.astar.search(graph, current_pos, parcel_node, {diagonal: false});
-        for (let i =0;i < result.length;i++){
-            const direction = result[i].movement
-            status = await client.move(direction)
+    
+    if (intention.target === null) {
+
+        let paths = intention.ndp.map( dp => astar.astar.search(graph, graph.grid[Math.round(believes.me.x)][Math.round(believes.me.y)], graph.grid[dp.x][dp.y], {diagonal: false}));
+        paths.sort( (a,b) => a.length - b.length );
+        let shortest_path = paths[0];
+        for (let i = 0;i < shortest_path.length;i++){
+            const direction = shortest_path[i].movement
+            let status = await client.move(direction)
             if(status){
-                console.log("Movement status:",status)
                 believes.me.x = status.x
                 believes.me.y = status.y
             }
-            else{
-                console.log("Failed movements") //BUG(???)
-                i--
-                failed_movemets++
-            }
-                
-            if(failed_movemets>20){
-                    failed_movemets = 0
-                    console.log("Recalculating path to delivery point")
-                    i = 0
-                    let delpoints = believes.deliveryPoints.filter(d=>d.x!=intention.target.x && d.y!=intention.target.y)
-                    intentions.shift()
-                    intentions.push({type: actions.deliver_parcel, target: delpoints.sort( (a,b) => distance(believes.me,a) - distance(believes.me,b) )[0]})//we are finding the nearest delivery point not the a star algoritmW
-                    intention = intentions[0]
-                
-                    current_pos = graph.grid[Math.round(me.x)][Math.round(me.y)];
-                    parcel_node = graph.grid[intention.target.x][intention.target.y];
-                   
-                    result = astar.astar.search(graph, current_pos, parcel_node, {diagonal: false});
+        }
+    } else {
+        while(believes.me.x!=intention.target.x || believes.me.y!=intention.target.y){
+            console.log("Moving towards target",intention.target)
+            let status,failed_movemets=0
+            let {me} = believes
+            let stopAction = false
+            let current_pos = graph.grid[Math.round(me.x)][Math.round(me.y)];
+            let parcel_node = graph.grid[intention.target.x][intention.target.y];
+            let result = astar.astar.search(graph, current_pos, parcel_node, {diagonal: false});
+            for (let i =0;i < result.length;i++){
+                const direction = result[i].movement
+                status = await client.move(direction)
+                if(status){
+                    console.log("Movement status:",status)
+                    believes.me.x = status.x
+                    believes.me.y = status.y
+                }
+                else{
+                    console.log("Failed movements") //BUG(???)
+                    i--
+                    failed_movemets++
+                }
                     
+                if(intention.type = actions.deliver_parcel && failed_movemets>20){
+                        failed_movemets = 0
+                        console.log("Recalculating path to delivery point")
+                        i = -1 
+                        let delpoints = believes.deliveryPoints.filter(d=>d.x!=intention.target.x && d.y!=intention.target.y)
+                        intentions.shift()
+                        intentions.push({type: actions.deliver_parcel, target: delpoints.sort( (a,b) => distance(believes.me,a) - distance(believes.me,b) )[0]})//we are finding the nearest delivery point not the a star algoritmW
+                        intention = intentions[0]
+                    
+                        current_pos = graph.grid[Math.round(me.x)][Math.round(me.y)];
+                        parcel_node = graph.grid[intention.target.x][intention.target.y];
+                       
+                        result = astar.astar.search(graph, current_pos, parcel_node, {diagonal: false});
+                        
+                }
+                // else if(intentions.type = action.pick_parcel && failed_movemets>20){
+                //     failed_movemets = 0
+
+                // }
+                if(needToStop(intention,i,result))    
+                    break
             }
-            if(needToStop(intention,i,result))    
+            if(stopAction)
                 break
         }
-        if(stopAction)
-            break
     }
+
 }
 
 function carryingParcelGone(){
