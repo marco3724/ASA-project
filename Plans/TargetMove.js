@@ -3,6 +3,7 @@ import * as astar from "../Utility/astar.js"
 export class TargetMove{
     constructor(intention,intentionRevision){
         this.intention = intention
+        // this.obstacle = this.obstacle
         // this.intensionRevision =  intentionRevision
         // this.replan = replan
     }
@@ -19,6 +20,7 @@ export class TargetMove{
 
         for (let i =0;i < result.length;i++){
             const direction = result[i].movement
+
             status = await client.move(direction)
             if(status){
                 console.log("Movement status:",status)

@@ -50,7 +50,7 @@ client.onYou( ( {id, name, x, y, score} ) => {
 
 
 client.onParcelsSensing( async ( perceived_parcels ) => {
-    believes.parcels = perceived_parcels.filter( p => p.carriedBy == null || p.carriedBy== believes.me.id ).map(p=> {return {...p,x:Math.round(p.x),y:Math.round(p.y),distance: distance(believes.me,p)}})
+    believes.parcels = perceived_parcels.filter( p => p.carriedBy == null || p.carriedBy== believes.me.id ).map(p=> {return {...p,x:Math.round(p.x),y:Math.round(p.y)}})
     if(logBelieves)
         console.log("Parcels: ",believes.parcels) 
 } )
@@ -72,7 +72,7 @@ function sleep(ms) {
 let intentionGenerator = new Intention()
 async function agentLoop(){
     let action = intentionGenerator.generateAndFilterOptions()
-    await sleep(2000) //wait the map initialization
+    //await sleep(2000) //wait the map initialization
     await action.execute()
     await agentLoop()
 }

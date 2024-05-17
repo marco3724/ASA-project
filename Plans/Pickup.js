@@ -12,4 +12,8 @@ export class Pickup {
         await action.execute();
         await client.pickup();
     }
+    replan() {
+    //     let action = new TargetMove(this.intention);
+    //    return 
+    }
 }

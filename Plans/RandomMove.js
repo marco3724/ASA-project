@@ -7,7 +7,6 @@ export class RandomMove{
         let {map, mapX, mapY} = mapConstant;
         let previousDirection = believes.me.previousDirection
         let dir = []
-        console.log(map, mapX, mapY,previousDirection)
         if(map){
             if(Math.ceil(believes.me.y)<mapY-1 && map[believes.me.x][believes.me.y+1]==1 && previousDirection !== 'down')
                 dir.push('up')
