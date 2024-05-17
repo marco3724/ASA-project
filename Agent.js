@@ -10,17 +10,6 @@ const logBelieves = (process.argv.includes('-b') || process.argv.includes('--bel
 
 
 //Updating Believes
-client.onAgentsSensing( (agents) => {
-    agents.forEach(agents =>{
-    believes.agentsPosition.has(agents.id) ? 
-        believes.agentsPosition.set(agents.id, {x:agents.x,y:agents.y,score:agents.score})
-        : 
-        believes.agentsPosition.set(agents.id, {x:agents.x,y:agents.y,score:agents.score})
-    })
-    if(logBelieves)
-        console.log("Agents position: ",believes.agentsPosition)
-    
-} )
 client.onMap((width, height, tiles) => {
     mapConstant.mapX = width;
     mapConstant.mapY = height;
@@ -36,6 +25,18 @@ client.onMap((width, height, tiles) => {
     if(logBelieves)
         console.log("Graph: ",mapConstant.graph.toString())
 });
+client.onAgentsSensing( (agents) => {
+    agents.forEach(agents =>{
+    believes.agentsPosition.has(agents.id) ? 
+        believes.agentsPosition.set(agents.id, {x:agents.x,y:agents.y,score:agents.score})
+        : 
+        believes.agentsPosition.set(agents.id, {x:agents.x,y:agents.y,score:agents.score})
+    })
+    if(logBelieves)
+        console.log("Agents position: ",believes.agentsPosition)
+    
+} )
+
 
 client.onYou( ( {id, name, x, y, score} ) => {
     believes.me.id = id
@@ -65,12 +66,14 @@ client.onConfig( (config) => {
 })
 
 
-
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 let intentionGenerator = new Intention()
 async function agentLoop(){
     let action = intentionGenerator.generateAndFilterOptions()
+    await sleep(2000) //wait the map initialization
     await action.execute()
-
     await agentLoop()
 }
 
