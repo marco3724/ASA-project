@@ -3,13 +3,13 @@ import * as astar from "../Utility/astar.js"
 export class TargetMove{
     constructor(intention,intentionRevision){
         this.intention = intention
-        this.intensionRevision =  intentionRevision
-        this.replan = replan
+        // this.intensionRevision =  intentionRevision
+        // this.replan = replan
     }
     async execute(){
         let {intention} = this
         console.log("Moving towards target",intention.target)
-        let status,failed_movemets=0
+        let status,failed_movements=0
         let {me} = believes
         let graph = mapConstant.graph
 
@@ -28,7 +28,7 @@ export class TargetMove{
             else{
                 console.log("Failed movements") 
                 i--
-                failed_movemets++
+                failed_movements++
             }
 
     }
