@@ -3,13 +3,14 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "type":"module",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@unitn-asa/deliveroo-js-client": "^0.0.37"
+    "@unitn-asa/deliveroo-js-client": "^0.0.37",
+    "@unitn-asa/pddl-client": "^0.0.37"
   }
 }
