@@ -58,7 +58,8 @@ client.onConfig( (config) => {
     believes.config = config
     believes.config.rewardDecayRatio = 0
     if(believes.config.PARCEL_DECADING_INTERVAL=="infinite")
-        min_reward = 0
+        //min_reward = 0 TODO
+        console.log("a caso")
     else
         believes.config.rewardDecayRatio = config.MOVEMENT_DURATION/(config.PARCEL_DECADING_INTERVAL.split("s")[0] *1000) //cost of moving one step
     if(logBelieves)

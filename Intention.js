@@ -17,6 +17,9 @@ export class Intention{
         return new RandomMove() //is there is no action available i will move randomly
         
     }
-    //do the revision for everyplan
+    //do the revision for everyplan TODO
+    // revisePlan(){
+    //     this.plan = this.generateAndFilterOptions()
+    // }
 }
 
