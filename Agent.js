@@ -16,11 +16,55 @@ client.onMap((width, height, tiles) => {
     mapConstant.map = new Array(mapConstant.mapX).fill(0).map( () => new Array(mapConstant.mapY).fill(0));
 
     tiles.forEach((tile) => {
+        // each tile has this format: { x: 0, y: 0, delivery: t/f, parcelSpawner: t/f }
         mapConstant.map[tile.x][tile.y] = tile.delivery ? 2 : 1; // 2 is delivery point, 1 is normal tile
         if (tile.delivery) {
             believes.deliveryPoints.push(tile);
         }
     });
+
+    
+
+    for (let i = 0; i < mapConstant.map.length; i++) {
+        for (let j = 0; j < mapConstant.map[i].length; j++) {
+            if (mapConstant.map[i][j] != 0) {
+                let currentTile = `t_${i}_${j}`;
+                mapConstant.pddlMapObjects += `${currentTile} `;
+                mapConstant.pddlTiles += `(tile ${currentTile}) `;
+
+                // check for neighbors
+                if (i > 0 && mapConstant.map[i - 1][j] != 0) {
+                    let neighborTile = `t_${i - 1}_${j}`;
+                    mapConstant.pddlNeighbors += `(left ${currentTile} ${neighborTile}) `;
+                }
+                if (i < mapConstant.mapX - 1 && mapConstant.map[i + 1][j] != 0) {
+                    let neighborTile = `t_${i + 1}_${j}`;
+                    mapConstant.pddlNeighbors += `(right ${currentTile} ${neighborTile}) `;
+                }
+                if (j > 0 && mapConstant.map[i][j - 1] != 0) {
+                    let neighborTile = `t_${i}_${j - 1}`;
+                    mapConstant.pddlNeighbors += `(down ${currentTile} ${neighborTile}) `;
+                }
+                if (j < mapConstant.mapY - 1 && mapConstant.map[i][j + 1] != 0) {
+                    let neighborTile = `t_${i}_${j + 1}`;
+                    mapConstant.pddlNeighbors += `(up ${currentTile} ${neighborTile}) `;
+                }
+            }
+
+            // check for delivery points
+            if (mapConstant.map[i][j] == 2) {
+                let currentTile = `t_${i}_${j}`;
+                mapConstant.pddlDeliveryPoints += `(delivery ${currentTile}) `;
+            }
+        }
+    }
+    // maybe here we could delete the last space ???
+    // console.log("PDDL MAP: ", mapConstant.pddlMapObjects);
+    // console.log("PDDL NEIGHBORS: ", mapConstant.pddlNeighbors);
+    // console.log("PDDL DELIVERY POINTS: ", mapConstant.pddlDeliveryPoints);
+
+
+    // is this necessary?
     mapConstant.graph = new astar.Graph(mapConstant.map);
     if(logBelieves)
         console.log("Graph: ",mapConstant.graph.toString())

@@ -33,11 +33,15 @@ export const believes = {
  }
 
 export const mapConstant = {
-    map: null,
-    mapX: 0,
-    mapY: 0,
-    graph:null
-
+  map: null,
+  mapX: 0,
+  mapY: 0,
+  graph: null,
+  pddlMapObjects: "",
+  // Initialization
+  pddlTiles: "",
+  pddlNeighbors: "",
+  pddlDeliveryPoints: "",
 }
 
 //Hyperparameter
