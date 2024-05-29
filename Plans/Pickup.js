@@ -1,9 +1,10 @@
 import { TargetMove } from "./TargetMove.js";
-import { believes, client } from "../Believes.js";
+import { client } from "../Believes.js";
 import fs from 'fs';
 import { Plan } from "./Plan.js";
 import { onlineSolver, PddlProblem } from "@unitn-asa/pddl-client";
-import { mapConstant } from "../Believes.js";  
+import { mapConstant, believes } from "../Believes.js";  
+
 function readFile ( path ) {
     
     return new Promise( (res, rej) => {
@@ -16,6 +17,7 @@ function readFile ( path ) {
     })
 
 }
+
 export class Pickup{
     constructor(intention) {
         this.intention = intention;
