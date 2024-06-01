@@ -1,35 +1,15 @@
-import { TargetMove } from "./TargetMove.js";
-import { client } from "../Believes.js";
-import fs from 'fs';
+
 import { Plan } from "./Plan.js";
 import { onlineSolver, PddlProblem } from "@unitn-asa/pddl-client";
 import { mapConstant, believes } from "../Believes.js";  
-
-function readFile ( path ) {
-    
-    return new Promise( (res, rej) => {
-
-        fs.readFile( path, 'utf8', (err, data) => {
-            if (err) rej(err)
-            else res(data)
-        })
-
-    })
-
-}
-
 export class Pickup{
     constructor(intention) {
         this.intention = intention;
+        this.plan = null;
     }
 
-    async execute() {
-        // let action = new TargetMove(this.intention);
-        // console.log('Pickup');
+    async generatePlan() {
         console.log("pickup intention", this.intention);
-        // await client.pickup(); TODO Domani generation ad refactor
-        let domain = await readFile('./domain.pddl' );
-        //let problem = await readFile('./problem.pddl' ); //needs to be generated
         let parcelTile = `t_${this.intention.target.x}_${this.intention.target.y}`;
         let pddlProblem = new PddlProblem(
             'pickup',
@@ -47,11 +27,14 @@ export class Pickup{
 
         let problem = pddlProblem.toPddlString();
 
-        console.log( problem.split('goal')[1] );
-        var plan = await onlineSolver(domain, problem);
-        console.log( plan );
-        await Plan.pddlExecutor.exec( plan );
+        //console.log( problem.split('goal')[1] );
+        this.plan = await onlineSolver(Plan.domain, problem);
     }
+
+    async execute(){
+        await Plan.pddlExecutor.exec(this.plan);
+    }
+    
     // async replan() {
     // //     let action = new TargetMove(this.intention);
     // //    return 
