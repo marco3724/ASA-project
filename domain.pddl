@@ -90,7 +90,7 @@
             (delivery ?t)
         )
         :effect (and
-            (at ?p ?t)
+            (at ?me ?t)
             (not (carrying ?me ?p))
         )
     )
