@@ -21,9 +21,20 @@ client.onMap((width, height, tiles) => {
         if (tile.delivery) {
             believes.deliveryPoints.push(tile);
         }
-    });
 
-    
+        /**
+         * Heatmap initialization
+         * We initialize the heatmap with 1 if the tile is a parcel spawner, so that
+         * the agent will be more likely to go there.
+         */
+        if (tile.parcelSpawner) {
+            believes.heatmap.set(`t_${tile.x}_${tile.y}`, 1);
+        } else {
+            believes.heatmap.set(`t_${tile.x}_${tile.y}`, 0);
+        }
+    });
+    if(logBelieves)
+        console.log([...believes.heatmap.entries()])
 
     for (let i = 0; i < mapConstant.map.length; i++) {
         for (let j = 0; j < mapConstant.map[i].length; j++) {
@@ -94,10 +105,26 @@ client.onYou( ( {id, name, x, y, score} ) => {
 
 
 client.onParcelsSensing( async ( perceived_parcels ) => {
+    // parcels have this format { id: 'p0', x: 7, y: 6, carriedBy: null, reward: 29 }
     believes.parcels = perceived_parcels.filter( p => p.carriedBy == null || p.carriedBy== believes.me.id ).map(p=> {return {...p,x:Math.round(p.x),y:Math.round(p.y)}})
     if(logBelieves)
-        console.log("Parcels: ",believes.parcels) 
-} )
+        console.log("Parcels: ",believes.parcels)
+
+    //Update heatmap
+    perceived_parcels.forEach( parcel => {
+        if(parcel.carriedBy == null || parcel.carriedBy== believes.me.id){
+            let parcelPosition = `t_${Math.round(parcel.x)}_${Math.round(parcel.y)}`
+            if (believes.heatmap.has(parcelPosition)) {
+                console.log("The heatmap has the parcel position")
+                let currentProbability = believes.heatmap.get(parcelPosition)
+                believes.heatmap.set(parcelPosition, currentProbability + 1)
+            }
+        }
+    });
+    if(logBelieves)
+        console.log("Heatmap: ",[...believes.heatmap.entries()])
+});
+
 client.onConfig( (config) => {
     believes.config = config
     believes.config.rewardDecayRatio = 0
