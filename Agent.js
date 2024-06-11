@@ -28,9 +28,9 @@ client.onMap((width, height, tiles) => {
          * the agent will be more likely to go there.
          */
         if (tile.parcelSpawner) {
-            believes.heatmap.set(`t_${tile.x}_${tile.y}`, 1);
+            believes.heatmap.set(`t_${tile.x}_${tile.y}`, {x: tile.x, y: tile.y, currentParcelId: null, prob: 1});
         } else {
-            believes.heatmap.set(`t_${tile.x}_${tile.y}`, 0);
+            believes.heatmap.set(`t_${tile.x}_${tile.y}`, {x: tile.x, y: tile.y, currentParcelId: null, prob: 0});
         }
     });
     if(logBelieves)
@@ -112,17 +112,23 @@ client.onParcelsSensing( async ( perceived_parcels ) => {
 
     //Update heatmap
     perceived_parcels.forEach( parcel => {
-        if(parcel.carriedBy == null || parcel.carriedBy== believes.me.id){
+        if(parcel.carriedBy == null || parcel.carriedBy !== believes.me.id){
             let parcelPosition = `t_${Math.round(parcel.x)}_${Math.round(parcel.y)}`
             if (believes.heatmap.has(parcelPosition)) {
-                console.log("The heatmap has the parcel position")
-                let currentProbability = believes.heatmap.get(parcelPosition)
-                believes.heatmap.set(parcelPosition, currentProbability + 1)
+                let tileInfo = believes.heatmap.get(parcelPosition)
+                /**
+                 * if the we haven't seen a parcel in this tile, increease the probability
+                 * if we see a parcel with a different id then previous, increase the probability
+                 * this is done to avoid increasing the probability of the same parcel
+                 */
+                if (tileInfo.currentParcelId == null || tileInfo.currentParcelId !== parcel.id) {
+                    believes.heatmap.set(parcelPosition, {...tileInfo, currentParcelId: parcel.id, prob: tileInfo.prob + 1})
+                }
             }
         }
     });
-    if(logBelieves)
-        console.log("Heatmap: ",[...believes.heatmap.entries()])
+
+    console.log("Heatmap: ",[...believes.heatmap.entries()])
 });
 
 client.onConfig( (config) => {
