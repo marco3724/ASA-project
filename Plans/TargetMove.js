@@ -1,32 +1,19 @@
 import {believes,mapConstant,client} from "../Believes.js"
 import {onlineSolver, PddlProblem} from "@unitn-asa/pddl-client";
 import {Plan} from "./Plan.js"
-import fs from 'fs';
-
-function readFile ( path ) {
-    
-    return new Promise( (res, rej) => {
-
-        fs.readFile( path, 'utf8', (err, data) => {
-            if (err) rej(err)
-            else res(data)
-        })
-
-    })
-
-}
 
 export class TargetMove{
     constructor(intention,intentionRevision){
         this.intention = intention
+        this.plan = null
         // this.obstacle = this.obstacle
         // this.intensionRevision =  intentionRevision
         // this.replan = replan
     }
-    async execute(){
+    async generatePlan(){
         let {intention} = this // is this necessary?
         console.log("Moving towards target",intention.target)
-        let domain = await readFile('./domain.pddl' );
+        let domain = Plan.domain;
         let destinationTile = `t_${intention.target.x}_${intention.target.y}`
         let pddlProblem = new PddlProblem(
             'move',
@@ -41,9 +28,7 @@ export class TargetMove{
         );
 
         let problem = pddlProblem.toPddlString();
-        console.log(problem);
-        var plan = await onlineSolver(domain, problem);
-        await Plan.pddlExecutor.exec( plan );
+        this.plan = await onlineSolver(domain, problem);
 
     //     let status,failed_movements=0
     //     let {me} = believes
@@ -69,5 +54,9 @@ export class TargetMove{
     //         }
 
     // }
-}
+    }
+
+    async execute(){
+        await Plan.pddlExecutor.exec(this.plan);
+    }
 }
