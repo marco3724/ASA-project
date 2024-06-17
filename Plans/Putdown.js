@@ -1,37 +1,17 @@
-import { TargetMove } from "./TargetMove.js";
-import { client } from "../Believes.js";
-import fs from 'fs';
 import { Plan } from "./Plan.js";
 import { onlineSolver, PddlProblem } from "@unitn-asa/pddl-client";
 import { mapConstant, believes } from "../Believes.js";
 
-function readFile ( path ) {
-    
-    return new Promise( (res, rej) => {
 
-        fs.readFile( path, 'utf8', (err, data) => {
-            if (err) rej(err)
-            else res(data)
-        })
-
-    })
-
-}
 
 export class Putdown {
     constructor(intention) {
         this.intention = intention;
+        this.plan = null;
     }
 
-    async execute() {
-        // let action = new TargetMove(this.intention);
-        // console.log('Putdown');
-        // await action.execute();
-        // await client.putdown();
-
+    async generatePlan() {
         console.log("putdown intention", this.intention);
-
-        let domain = await readFile('./domain.pddl');
         let deliveryTile = `t_${this.intention.target.x}_${this.intention.target.y}`;
         let pddlProblem = new PddlProblem(
             'putdown',
@@ -49,8 +29,9 @@ export class Putdown {
 
         let problem = pddlProblem.toPddlString();
         console.log(problem.split('goal')[1]);
-        var plan = await onlineSolver(domain, problem);
-        console.log(plan);
-        await Plan.pddlExecutor.exec(plan);
+        this.plan = await onlineSolver(Plan.domain, problem);
+    }
+    async execute(){
+        await Plan.pddlExecutor.exec(this.plan);
     }
 }

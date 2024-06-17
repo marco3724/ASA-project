@@ -1,8 +1,8 @@
-import {distance,nearestDelivery} from "./Utility/utility.js"
+import {distance,nearestDelivery,readFile} from "./Utility/utility.js"
 import * as astar from "./Utility/astar.js"
 import {mapConstant,radius_distance,min_reward,believes,client} from "./Believes.js"
 import {Intention} from "./Intention.js"
-
+import { Plan } from "./Plans/Plan.js"
 
 //Setup
 const logBelieves = (process.argv.includes('-b') || process.argv.includes('--believe')) 
@@ -144,15 +144,19 @@ client.onConfig( (config) => {
 })
 
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-let intentionGenerator = new Intention()
+let intention = new Intention()
 async function agentLoop(){
-    let action = intentionGenerator.generateAndFilterOptions()
-    //await sleep(2000) //wait the map initialization
-    await action.execute()
+
+    let plan = intention.generateAndFilterOptions()
+
+    await plan.generatePlan()
+    await plan.execute()
     await agentLoop()
 }
 
-agentLoop()
+async function start(){
+    Plan.domain = await readFile('./domain.pddl' );
+    agentLoop()
+}
+start()
+
