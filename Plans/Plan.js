@@ -60,23 +60,40 @@ export class Plan {
         this.plan = null
         this.stop = false  
     }
-     async execute (){
+    //geenratePlan Interface
+    async generatePlan(){
+        throw new Error("generatePlan is not implemented")
+    }
+
+    async execute (){
         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Start Executing the plan`);
+        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, "Plan object "+JSON.stringify(this.plan));
         let retry = 0
         for (let i = 0; i < this.plan.length; i++) {
             let actionName = this.plan[i].action
             let exec= this.actions.get(actionName)
             let status = await exec()
-            if(retry>hyperParams.max_retry){
-                //replan
-                break
-            }
+
             if(!status){
-                Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, `Action ${actionName} failed, retrying ${retry+1} time`);
+                retry++ //since it has failed, increment the retry number
+                if(retry>hyperParams.max_retry){
+                    //replanning
+                    if(actionName.includes("MOVE")){  
+                        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Replanning to avoid obstacle`);
+                        let obstacle =  this.plan[i].args[2].toLowerCase()//the tile that is blocking me
+                        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, `Obstacle to avoid ${obstacle}`);
+                        await this.generatePlan(obstacle)
+                        i = -1 //so the next iteration can start with the new plan from 0
+                        retry = 0 //reset the retry
+                        continue
+                    }
+                    break 
+                }
+                Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, `Action ${actionName} failed, retrying ${retry} time`);
                 i--
-                retry++
                 continue
             }
+
             retry = 0
             if(this.stop){
                 Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan stopped due to revision`);

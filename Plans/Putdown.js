@@ -2,7 +2,7 @@ import { Plan } from "./Plan.js";
 import { onlineSolver, PddlProblem } from "@unitn-asa/pddl-client";
 import { mapConstant, believes } from "../Believes.js";
 import { Logger } from "../Utility/Logger.js";
-
+import { removeArbitraryStringPatterns } from "../Utility/utility.js";
 
 export class Putdown extends Plan{
     constructor(intention) {
@@ -10,14 +10,24 @@ export class Putdown extends Plan{
         this.intention = intention;
     }
 
-    async generatePlan() {
+    async generatePlan(obstacle) {
 
         let deliveryTile = `t_${this.intention.target.x}_${this.intention.target.y}`;
+
+        let mapTiles =mapConstant.pddlTiles
+        let mapNeighbors = mapConstant.pddlNeighbors
+        if(obstacle){
+            mapTiles = removeArbitraryStringPatterns(mapConstant.pddlTiles,obstacle)
+            mapNeighbors = removeArbitraryStringPatterns(mapConstant.pddlNeighbors,obstacle)
+            Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, JSON.stringify(mapTiles));
+            Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, JSON.stringify(mapNeighbors));
+        }
+
         let pddlProblem = new PddlProblem(
             'putdown',
             mapConstant.pddlMapObjects + 'parcel1 ' + 'agent1',
-            mapConstant.pddlTiles +
-            mapConstant.pddlNeighbors +
+            mapTiles +
+            mapNeighbors +
             mapConstant.pddlDeliveryPoints +
             `(at agent1 t_${believes.me.x}_${believes.me.y}) ` +
             `(agent agent1) ` +

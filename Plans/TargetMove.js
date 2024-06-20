@@ -2,6 +2,7 @@ import {believes,mapConstant,client} from "../Believes.js"
 import {onlineSolver, PddlProblem} from "@unitn-asa/pddl-client";
 import {Plan} from "./Plan.js"
 import { Logger } from "../Utility/Logger.js";
+import {removeArbitraryStringPatterns} from "../Utility/utility.js";
 export class TargetMove extends Plan{
     constructor(intention,intentionRevision){
         super()
@@ -10,15 +11,24 @@ export class TargetMove extends Plan{
         // this.intensionRevision =  intentionRevision
         // this.replan = replan
     }
-    async generatePlan(){
+    async generatePlan(obstacle){
         let {intention} = this // is this necessary?
         let domain = Plan.domain;
         let destinationTile = `t_${intention.target.x}_${intention.target.y}`
+        let mapTiles =mapConstant.pddlTiles
+        let mapNeighbors = mapConstant.pddlNeighbors
+        if(obstacle){
+            mapTiles = removeArbitraryStringPatterns(mapConstant.pddlTiles,obstacle)
+            mapNeighbors = removeArbitraryStringPatterns(mapConstant.pddlNeighbors,obstacle)
+            Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, JSON.stringify(mapTiles));
+            Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, JSON.stringify(mapNeighbors));
+        }
+
         let pddlProblem = new PddlProblem(
             'move',
             mapConstant.pddlMapObjects + 'agent1',
-            mapConstant.pddlTiles +  
-            mapConstant.pddlNeighbors + 
+            mapTiles+  
+            mapNeighbors + 
             mapConstant.pddlDeliveryPoints + 
             `(at agent1 t_${believes.me.x}_${believes.me.y}) ` +
             `(agent agent1) ` +

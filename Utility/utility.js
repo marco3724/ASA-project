@@ -28,3 +28,7 @@ export function readFile ( path ) {
     })
 
 }
+export function removeArbitraryStringPatterns(text, arbitraryString) {
+    const regex = new RegExp(`\\([^()]*${arbitraryString}[^()]*\\)`, 'g');//match the pattern (.....arbitrarystring....)
+    return text.replace(regex, '');//remove
+}
