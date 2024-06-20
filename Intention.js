@@ -35,15 +35,18 @@ export class Intention{
             if (believes.heatmap.size > 0) {
                 let sortedHeatmap = new Map([...believes.heatmap.entries()].sort((a, b) => b[1].prob - a[1].prob));
                 let firstValue = sortedHeatmap.values().next().value;
+                let maxProb = firstValue.prob;
+                let maxProbPoints = [...sortedHeatmap.values()].filter(v => v.prob == maxProb);
+                if (maxProbPoints.length > 1) {
+                    let randomPoint = Math.floor(Math.random() * maxProbPoints.length);
+                    let randomPointValue = maxProbPoints[randomPoint];
+                    return new TargetMove({ target: { x: randomPointValue.x, y: randomPointValue.y } });
+                }
                 return new TargetMove({ target: {x: firstValue.x, y: firstValue.y} });
             }
             return new RandomMove();
         }
         
     }
-    //do the revision for everyplan TODO
-    // revisePlan(){
-    //     this.plan = this.generateAndFilterOptions()
-    // }
 }
 
