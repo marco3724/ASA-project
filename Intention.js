@@ -4,7 +4,7 @@ import { Putdown } from './Plans/Putdown.js';
 import {RandomMove} from './Plans/RandomMove.js'
 import { TargetMove } from './Plans/TargetMove.js'
 import { distance } from './Utility/utility.js';
-
+import { Logger } from './Utility/Logger.js';
 export class Intention{
     generateAndFilterOptions(){
         // if(believes.parcels.some(p=>p.carriedBy==believes.me.id)){ //if i am carrying some parcel i want to deliver
@@ -16,12 +16,16 @@ export class Intention{
         //     return new Pickup({target:nearestParcel})
         // }
         // return new RandomMove() //is there is no action available i will move randomly
-
+        console.groupEnd()
         if (believes.parcels.some(p => p.carriedBy === believes.me.id)) {
             let nearestDelivery = believes.deliveryPoints.sort((a, b) => distance(believes.me, a) - distance(believes.me, b))[0]
+            Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Deliver parcel to ${nearestDelivery.x}, ${nearestDelivery.y}`);
+            console.group()
             return new Putdown({ target: nearestDelivery });
         } else if (believes.parcels.filter(p => p.carriedBy === null && p.carriedBy != believes.me.id).length !== 0) {
             let nearestParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) => distance(believes.me, a) - distance(believes.me, b))[0]
+            Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Pick up parcel from ${nearestParcel.x}, ${nearestParcel.y}`);
+            console.group()
             return new Pickup({ target: nearestParcel })
         } else {
             /**
@@ -42,11 +46,52 @@ export class Intention{
                     let randomPointValue = maxProbPoints[randomPoint];
                     return new TargetMove({ target: { x: randomPointValue.x, y: randomPointValue.y } });
                 }
+                Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Exploring to ${firstValue.x}, ${firstValue.y}`);
+                console.group()
                 return new TargetMove({ target: {x: firstValue.x, y: firstValue.y} });
             }
             return new RandomMove();
         }
         
+    }
+    async revise(plan){
+        if(plan instanceof Pickup)
+            this.revisePickUp(plan)
+        else if(plan instanceof Putdown)
+            this.revisePutDown(plan)
+        else if(plan instanceof TargetMove)
+            this.reviseTargetMove(plan)
+    }
+    //do the revision for everyplan TODO
+    async revisePickUp(plan){
+        const {intention} = plan
+        Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO,'Starting to revise pick up')
+        while ( !plan.stop ) {
+            if (!believes.parcels.some(p=>(p.id==intention.target.id))){ //if the parcel is not there anymore
+                plan.stop = true
+            }
+            await new Promise( res => setImmediate( res ) );
+        }  
+    }
+    async revisePutDown(plan){
+        const {intention} = plan
+        Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO,'Starting to revise put down')
+        while ( !plan.stop ) {
+            if (!believes.parcels.some(p=>p.carriedBy==believes.me.id)){ //if i'm not carrying any parcel anymore
+                plan.stop = true
+            }
+            await new Promise( res => setImmediate( res ) );
+        }
+    }
+    async reviseTargetMove(plan){
+        const {intention} = plan
+        Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO,'Starting to revise target move')
+        while ( !plan.stop ) {
+            if (believes.parcels.length>0){ //if i sense some parcel, instead of exploring i want to pick that parcel
+                plan.stop = true
+            }
+            await new Promise( res => setImmediate( res ) );
+        }
     }
 }
 

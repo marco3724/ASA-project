@@ -1,25 +1,34 @@
 import {believes,mapConstant,client} from "../Believes.js"
 import {onlineSolver, PddlProblem} from "@unitn-asa/pddl-client";
 import {Plan} from "./Plan.js"
-
-export class TargetMove{
+import { Logger } from "../Utility/Logger.js";
+import {removeArbitraryStringPatterns} from "../Utility/utility.js";
+export class TargetMove extends Plan{
     constructor(intention,intentionRevision){
+        super()
         this.intention = intention
-        this.plan = null
         // this.obstacle = this.obstacle
         // this.intensionRevision =  intentionRevision
         // this.replan = replan
     }
-    async generatePlan(){
+    async generatePlan(obstacle){
         let {intention} = this // is this necessary?
-        console.log("Moving towards target",intention.target)
         let domain = Plan.domain;
         let destinationTile = `t_${intention.target.x}_${intention.target.y}`
+        let mapTiles =mapConstant.pddlTiles
+        let mapNeighbors = mapConstant.pddlNeighbors
+        if(obstacle){
+            mapTiles = removeArbitraryStringPatterns(mapConstant.pddlTiles,obstacle)
+            mapNeighbors = removeArbitraryStringPatterns(mapConstant.pddlNeighbors,obstacle)
+            Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, JSON.stringify(mapTiles));
+            Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, JSON.stringify(mapNeighbors));
+        }
+
         let pddlProblem = new PddlProblem(
             'move',
             mapConstant.pddlMapObjects + 'agent1',
-            mapConstant.pddlTiles +  
-            mapConstant.pddlNeighbors + 
+            mapTiles+  
+            mapNeighbors + 
             mapConstant.pddlDeliveryPoints + 
             `(at agent1 t_${believes.me.x}_${believes.me.y}) ` +
             `(agent agent1) ` +
@@ -28,7 +37,10 @@ export class TargetMove{
         );
 
         let problem = pddlProblem.toPddlString();
-        this.plan = await onlineSolver(domain, problem);
+        console.groupCollapsed("Generating plan");
+        super.plan = await onlineSolver(domain, problem);
+        console.groupEnd()
+        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan generated: ${super.plan}`);
 
     //     let status,failed_movements=0
     //     let {me} = believes
@@ -56,7 +68,7 @@ export class TargetMove{
     // }
     }
 
-    async execute(){
-        await Plan.pddlExecutor.exec(this.plan);
-    }
+    // async execute(){
+    //     await Plan.pddlExecutor.exec(this.plan);
+    // }
 }

@@ -1,23 +1,33 @@
 import { Plan } from "./Plan.js";
 import { onlineSolver, PddlProblem } from "@unitn-asa/pddl-client";
 import { mapConstant, believes } from "../Believes.js";
+import { Logger } from "../Utility/Logger.js";
+import { removeArbitraryStringPatterns } from "../Utility/utility.js";
 
-
-
-export class Putdown {
+export class Putdown extends Plan{
     constructor(intention) {
+        super()
         this.intention = intention;
-        this.plan = null;
     }
 
-    async generatePlan() {
-        console.log("putdown intention", this.intention);
+    async generatePlan(obstacle) {
+
         let deliveryTile = `t_${this.intention.target.x}_${this.intention.target.y}`;
+
+        let mapTiles =mapConstant.pddlTiles
+        let mapNeighbors = mapConstant.pddlNeighbors
+        if(obstacle){
+            mapTiles = removeArbitraryStringPatterns(mapConstant.pddlTiles,obstacle)
+            mapNeighbors = removeArbitraryStringPatterns(mapConstant.pddlNeighbors,obstacle)
+            Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, JSON.stringify(mapTiles));
+            Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, JSON.stringify(mapNeighbors));
+        }
+
         let pddlProblem = new PddlProblem(
             'putdown',
             mapConstant.pddlMapObjects + 'parcel1 ' + 'agent1',
-            mapConstant.pddlTiles +
-            mapConstant.pddlNeighbors +
+            mapTiles +
+            mapNeighbors +
             mapConstant.pddlDeliveryPoints +
             `(at agent1 t_${believes.me.x}_${believes.me.y}) ` +
             `(agent agent1) ` +
@@ -28,10 +38,12 @@ export class Putdown {
         );
 
         let problem = pddlProblem.toPddlString();
-        console.log(problem.split('goal')[1]);
-        this.plan = await onlineSolver(Plan.domain, problem);
+        console.groupCollapsed("Generating plan");
+        super.plan = await onlineSolver(Plan.domain, problem);
+        console.groupEnd()
+        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan generated: ${super.plan}`);
     }
-    async execute(){
-        await Plan.pddlExecutor.exec(this.plan);
-    }
+    // async execute(){
+    //     await Plan.pddlExecutor.exec(this.plan);
+    // }
 }
