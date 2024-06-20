@@ -46,5 +46,9 @@ export const mapConstant = {
 }
 
 //Hyperparameter
-export const radius_distance = 3
-export let min_reward = 15
+export const hyperParams = {
+   radius_distance: 3,
+   min_reward: 15,
+   max_retry: 10,
+  
+}
