@@ -36,19 +36,33 @@ export class Intention{
              * Also what happens if the heatmap is not ready yet?
              */
             // sort the heatmap
+            /**
+             * Inserire prob 5% che venga presa una cella a caso senza sorting
+             * Aggiungere decremento se cella non contiene parcel
+             */
             if (believes.heatmap.size > 0) {
-                let sortedHeatmap = new Map([...believes.heatmap.entries()].sort((a, b) => b[1].prob - a[1].prob));
-                let firstValue = sortedHeatmap.values().next().value;
-                let maxProb = firstValue.prob;
-                let maxProbPoints = [...sortedHeatmap.values()].filter(v => v.prob == maxProb);
-                if (maxProbPoints.length > 1) {
-                    let randomPoint = Math.floor(Math.random() * maxProbPoints.length);
-                    let randomPointValue = maxProbPoints[randomPoint];
-                    return new TargetMove({ target: { x: randomPointValue.x, y: randomPointValue.y } });
+                let prob = Math.floor(Math.random() * 100);
+                if (prob <= 5) {
+                    Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Exploring randomly`);
+                    let keys = Array.from(believes.heatmap.keys());
+                    let randomKey = keys[Math.floor(Math.random() * keys.length)];
+                    let target = believes.heatmap.get(randomKey);
+                    return new TargetMove({ target: { x: target.x, y: target.y } });
+                } else {
+                    let sortedHeatmap = new Map([...believes.heatmap.entries()].sort((a, b) => b[1].prob - a[1].prob));
+                
+                    let possibleTargets = []
+                    let it = sortedHeatmap.values();
+                    for (let i = 0; i < 3; i++) {
+                        possibleTargets.push(it.next().value);
+                    }
+    
+                    let random = Math.floor(Math.random() * possibleTargets.length);
+                    let target = possibleTargets[random];
+                    Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Exploring to ${target.x}, ${target.y}`);
+                    console.group();
+                    return new TargetMove({ target: { x: target.x, y: target.y } });
                 }
-                Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Exploring to ${firstValue.x}, ${firstValue.y}`);
-                console.group()
-                return new TargetMove({ target: {x: firstValue.x, y: firstValue.y} });
             }
             return new RandomMove();
         }
