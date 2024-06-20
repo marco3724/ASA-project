@@ -3,6 +3,10 @@ import { believes,mapConstant,client } from '../Believes.js'
 
 export class RandomMove{
 
+    async generatePlan(){
+        console.log("RandomMove")
+    }
+
     async execute(){
         let {map, mapX, mapY} = mapConstant;
         let previousDirection = believes.me.previousDirection
