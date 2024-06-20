@@ -2,10 +2,10 @@
 import { Plan } from "./Plan.js";
 import { onlineSolver, PddlProblem } from "@unitn-asa/pddl-client";
 import { mapConstant, believes } from "../Believes.js";  
-export class Pickup{
+export class Pickup extends Plan{
     constructor(intention) {
+        super()
         this.intention = intention;
-        this.plan = null;
     }
 
     async generatePlan() {
@@ -28,12 +28,12 @@ export class Pickup{
         let problem = pddlProblem.toPddlString();
 
         //console.log( problem.split('goal')[1] );
-        this.plan = await onlineSolver(Plan.domain, problem);
+        super.plan = await onlineSolver(Plan.domain, problem);
     }
 
-    async execute(){
-        await Plan.pddlExecutor.exec(this.plan);
-    }
+    // async execute(){
+    //     await Plan.exec(this.plan);
+    // }
     
     // async replan() {
     // //     let action = new TargetMove(this.intention);

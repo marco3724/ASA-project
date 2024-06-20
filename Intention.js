@@ -41,9 +41,45 @@ export class Intention{
         }
         
     }
+    async revise(plan){
+        console.log('revise')
+        if(plan instanceof Pickup)
+            this.revisePickUp(plan)
+        else if(plan instanceof Putdown)
+            this.revisePutDown(plan)
+        else if(plan instanceof TargetMove)
+            this.reviseTargetMove(plan)
+    }
     //do the revision for everyplan TODO
-    // revisePlan(){
-    //     this.plan = this.generateAndFilterOptions()
-    // }
+    async revisePickUp(plan){
+        const {intention} = plan
+        while ( !plan.stop ) {
+            console.log('revisePickUp')
+            if (!believes.parcels.some(p=>(p.id==intention.target.id))){ //if the parcel is not there anymore
+                plan.stop = true
+            }
+            await new Promise( res => setImmediate( res ) );
+        }  
+    }
+    async revisePutDown(plan){
+        const {intention} = plan
+        while ( !plan.stop ) {
+            console.log('revisePickUp')
+            if (!believes.parcels.some(p=>p.carriedBy==believes.me.id)){ //if i'm not carrying any parcel anymore
+                plan.stop = true
+            }
+            await new Promise( res => setImmediate( res ) );
+        }
+    }
+    async reviseTargetMove(plan){
+        const {intention} = plan
+        while ( !plan.stop ) {
+            console.log('revisePickUp')
+            if (believes.parcels.length>0){ //if i sense some parcel, instead of exploring i want to pick that parcel
+                plan.stop = true
+            }
+            await new Promise( res => setImmediate( res ) );
+        }
+    }
 }
 

@@ -4,10 +4,10 @@ import { mapConstant, believes } from "../Believes.js";
 
 
 
-export class Putdown {
+export class Putdown extends Plan{
     constructor(intention) {
+        super()
         this.intention = intention;
-        this.plan = null;
     }
 
     async generatePlan() {
@@ -29,9 +29,9 @@ export class Putdown {
 
         let problem = pddlProblem.toPddlString();
         console.log(problem.split('goal')[1]);
-        this.plan = await onlineSolver(Plan.domain, problem);
+        super.plan = await onlineSolver(Plan.domain, problem);
     }
-    async execute(){
-        await Plan.pddlExecutor.exec(this.plan);
-    }
+    // async execute(){
+    //     await Plan.pddlExecutor.exec(this.plan);
+    // }
 }

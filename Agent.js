@@ -1,6 +1,6 @@
 import {distance,nearestDelivery,readFile} from "./Utility/utility.js"
 import * as astar from "./Utility/astar.js"
-import {mapConstant,radius_distance,min_reward,believes,client} from "./Believes.js"
+import {mapConstant,hyperParams,believes,client} from "./Believes.js"
 import {Intention} from "./Intention.js"
 import { Plan } from "./Plans/Plan.js"
 
@@ -144,19 +144,16 @@ client.onConfig( (config) => {
 })
 
 
-let intention = new Intention()
 async function agentLoop(){
-
-    let plan = intention.generateAndFilterOptions()
-
-    await plan.generatePlan()
-    await plan.execute()
-    await agentLoop()
-}
-
-async function start(){
+    let intention = new Intention()
     Plan.domain = await readFile('./domain.pddl' );
-    agentLoop()
+    while(true){
+        let plan = intention.generateAndFilterOptions()
+        await plan.generatePlan()
+        intention.revise(plan)
+        await plan.execute()   
+    }
 }
-start()
+
+agentLoop()
 
