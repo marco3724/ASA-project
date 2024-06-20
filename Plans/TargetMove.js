@@ -1,7 +1,7 @@
 import {believes,mapConstant,client} from "../Believes.js"
 import {onlineSolver, PddlProblem} from "@unitn-asa/pddl-client";
 import {Plan} from "./Plan.js"
-
+import { Logger } from "../Utility/Logger.js";
 export class TargetMove extends Plan{
     constructor(intention,intentionRevision){
         super()
@@ -12,7 +12,6 @@ export class TargetMove extends Plan{
     }
     async generatePlan(){
         let {intention} = this // is this necessary?
-        console.log("Moving towards target",intention.target)
         let domain = Plan.domain;
         let destinationTile = `t_${intention.target.x}_${intention.target.y}`
         let pddlProblem = new PddlProblem(
@@ -28,7 +27,10 @@ export class TargetMove extends Plan{
         );
 
         let problem = pddlProblem.toPddlString();
+        console.groupCollapsed("Generating plan");
         super.plan = await onlineSolver(domain, problem);
+        console.groupEnd()
+        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan generated: ${super.plan}`);
 
     //     let status,failed_movements=0
     //     let {me} = believes

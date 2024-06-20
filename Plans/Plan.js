@@ -1,5 +1,6 @@
 import {PddlExecutor } from "@unitn-asa/pddl-client";   
 import { client,believes,hyperParams } from '../Believes.js';
+import { Logger } from "../Utility/Logger.js";
 
 export class Plan {
      static domain = null
@@ -39,7 +40,6 @@ export class Plan {
         } ],
         ['PICK-UP', async  (l)=> {
             let status = await client.pickup()
-            //console.log("pickup status",status)
             if(status && status.length>0){ //update the believes (because the believes are updated before the action is executed)
                 let index = believes.parcels.findIndex(p=>p.id==status[0].id)
                 believes.parcels[index].carriedBy = believes.me.id
@@ -49,7 +49,6 @@ export class Plan {
         } ],
         [ 'PUT-DOWN', async  (l)=> {
             let status = await client.putdown() 
-            //console.log("putdown status",status)
             if(status && status.length>0){ //update the believes (because the believes are updated before the action is executed)
                 believes.parcels = believes.parcels.filter(p=>p.id!==status[0].id)
                 
@@ -62,6 +61,7 @@ export class Plan {
         this.stop = false  
     }
      async execute (){
+        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Start Executing the plan`);
         let retry = 0
         for (let i = 0; i < this.plan.length; i++) {
             let actionName = this.plan[i].action
@@ -69,22 +69,22 @@ export class Plan {
             let status = await exec()
             if(retry>hyperParams.max_retry){
                 //replan
+                break
             }
             if(!status){
-                console.log("Failed action, retry")
+                Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, `Action ${actionName} failed, retrying ${retry+1} time`);
                 i--
                 retry++
                 continue
             }
             retry = 0
             if(this.stop){
-                console.log("Plan stopped")
-                break
+                Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan stopped due to revision`);
+                return
             }
         }
         this.stop = true
-        console.log("plan executed succesfully")
-        console.log("plan: ",this)
+        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan succesfully executed`);
     }
     
     

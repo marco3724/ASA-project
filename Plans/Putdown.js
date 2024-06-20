@@ -1,7 +1,7 @@
 import { Plan } from "./Plan.js";
 import { onlineSolver, PddlProblem } from "@unitn-asa/pddl-client";
 import { mapConstant, believes } from "../Believes.js";
-
+import { Logger } from "../Utility/Logger.js";
 
 
 export class Putdown extends Plan{
@@ -11,7 +11,7 @@ export class Putdown extends Plan{
     }
 
     async generatePlan() {
-        console.log("putdown intention", this.intention);
+
         let deliveryTile = `t_${this.intention.target.x}_${this.intention.target.y}`;
         let pddlProblem = new PddlProblem(
             'putdown',
@@ -28,8 +28,10 @@ export class Putdown extends Plan{
         );
 
         let problem = pddlProblem.toPddlString();
-        console.log(problem.split('goal')[1]);
+        console.groupCollapsed("Generating plan");
         super.plan = await onlineSolver(Plan.domain, problem);
+        console.groupEnd()
+        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan generated: ${super.plan}`);
     }
     // async execute(){
     //     await Plan.pddlExecutor.exec(this.plan);
