@@ -38,6 +38,7 @@ export const mapConstant = {
   mapX: 0,
   mapY: 0,
   graph: null,
+  parcelSpawner: [],
   pddlMapObjects: "",
   // Initialization
   pddlTiles: "",
@@ -47,8 +48,8 @@ export const mapConstant = {
 
 //Hyperparameter
 export const hyperParams = {
-   radius_distance: 3,
-   min_reward: 15,
-   max_retry: 10,
-  
+  radius_distance: 3,
+  min_reward: 15,
+  max_retry: 10,
+  heatmap_decading: 1, // this param is used to decrease the probability of a cell in the heatmap
 }
