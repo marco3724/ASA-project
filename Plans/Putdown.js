@@ -61,7 +61,7 @@ export class Putdown extends Plan{
                     let index = believes.blackList.deliveryPoints.findIndex(obj => obj.x === this.intention.target.x && obj.y === this.intention.target.y);
                     believes.deliveryPoints.push(believes.blackList.deliveryPoints[index]);//add the delivery point back to the list
                     believes.blackList.deliveryPoints.splice(index, 1);//remove the delivery point from the blacklist
-                    Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `BBBBBBBBBBBBBBBBBBBBBBBBBBBBBDelivery tile ${deliveryTile} removed from the blacklist`+JSON.stringify(believes.deliveryPoints));
+                    Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Delivery tile ${deliveryTile} removed from the blacklist`+JSON.stringify(believes.deliveryPoints));
                 }, hyperParams.blacklist_timeout);
             }
 

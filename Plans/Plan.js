@@ -87,9 +87,7 @@ export class Plan {
                         let obstacle =  this.plan[i].args[2].toLowerCase()//the tile that is blocking me
                         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, `Obstacle to avoid ${obstacle}`);
                         await this.generatePlan(obstacle)
-                        /* TODO: if the new plan is not possible, in the pick up case is ok, simply change intention
-                        in the drop down case, we may need to find another delivery and try again with that delivery point
-                        */
+                        
                         if(!this.plan){//it means the intention is not achieavable
                             this.stop = true
                             Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `No plan generated, intention not achievable`);

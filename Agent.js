@@ -127,7 +127,8 @@ client.onYou( ( {id, name, x, y, score} ) => {
 
 client.onParcelsSensing( async ( perceived_parcels ) => {
     // parcels have this format { id: 'p0', x: 7, y: 6, carriedBy: null, reward: 29 }
-    believes.parcels = perceived_parcels.filter( p => p.carriedBy == null || p.carriedBy== believes.me.id ).map(p=> {return {...p,x:Math.round(p.x),y:Math.round(p.y)}})
+    //keep only the parcels that are not carried by other agents (only me or no one), and also ignore the blacklisted parcels
+    believes.parcels = perceived_parcels.filter( p => !believes.blackList.parcels.includes(p.id) && (p.carriedBy == null || p.carriedBy== believes.me.id ) ).map(p=> {return {...p,x:Math.round(p.x),y:Math.round(p.y)}})
     if(logBelieves)
         Logger.logEvent(Logger.logType.BELIEVES,Logger.logLevels.INFO,"Parcels: "+JSON.stringify(believes.parcels))
 
