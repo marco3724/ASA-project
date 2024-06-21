@@ -1,4 +1,3 @@
-import {PddlExecutor } from "@unitn-asa/pddl-client";   
 import { client,believes,hyperParams } from '../Believes.js';
 import { Logger } from "../Utility/Logger.js";
 
@@ -83,11 +82,20 @@ export class Plan {
                         let obstacle =  this.plan[i].args[2].toLowerCase()//the tile that is blocking me
                         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, `Obstacle to avoid ${obstacle}`);
                         await this.generatePlan(obstacle)
+                        /* TODO: if the new plan is not possible, in the pick up case is ok, simply change intention
+                        in the drop down case, we may need to find another delivery and try again with that delivery point
+                        */
+                        if(!this.plan){//it means the intention is not achieavable
+                            this.stop = true
+                            Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `No plan generated, intention not achievable`);
+                            return //stop the plan
+                        }
+
                         i = -1 //so the next iteration can start with the new plan from 0
                         retry = 0 //reset the retry
                         continue
                     }
-                    break 
+                    break //no replanning possible, stop the plan
                 }
                 Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, `Action ${actionName} failed, retrying ${retry} time`);
                 i--
