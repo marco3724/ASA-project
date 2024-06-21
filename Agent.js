@@ -122,7 +122,6 @@ client.onYou( ( {id, name, x, y, score} ) => {
             }
         }
     }
-    console.log([...believes.heatmap.entries()])
 } )
 
 
