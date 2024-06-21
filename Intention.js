@@ -1,4 +1,4 @@
-import { believes } from './Believes.js';
+import { believes, hyperParams } from './Believes.js';
 import { Pickup } from './Plans/Pickup.js';
 import { Putdown } from './Plans/Putdown.js';
 import {RandomMove} from './Plans/RandomMove.js'
@@ -17,7 +17,8 @@ export class Intention{
         // }
         // return new RandomMove() //is there is no action available i will move randomly
         console.groupEnd()
-        if (believes.parcels.some(p => p.carriedBy === believes.me.id)) {
+        if (believes.parcels.some(p => p.carriedBy === believes.me.id) // if i have some package i may want to deliver
+            && believes.parcels.filter(p => p.carriedBy === null && distance(believes.me, p)<hyperParams.radius_distance).length==0) { //if there are no package near me i deliver, other i pick up
             let nearestDelivery = believes.deliveryPoints.sort((a, b) => distance(believes.me, a) - distance(believes.me, b))[0]
             Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Deliver parcel to ${nearestDelivery.x}, ${nearestDelivery.y}`);
             console.group()
@@ -70,9 +71,12 @@ export class Intention{
         const {intention} = plan
         Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO,'Starting to revise put down')
         while ( !plan.stop ) {
-            if (!believes.parcels.some(p=>p.carriedBy==believes.me.id)){ //if i'm not carrying any parcel anymore
+            if (!believes.parcels.some(p=>p.carriedBy==believes.me.id)) //if i'm not carrying any parcel anymore
                 plan.stop = true
-            }
+        
+            if (believes.parcels.filter(p => p.carriedBy === null && distance(believes.me, p)<hyperParams.radius_distance).length!=0) //if a parcel is near me when i try to deliver i want to pick that parcel
+                plan.stop = true
+            
             await new Promise( res => setImmediate( res ) );
         }
     }

@@ -30,7 +30,12 @@ export const believes = {
   },
   agentsPosition: new Map(),
   config: {},
-  heatmap: new Map() // maybe this should be somewhere else
+  heatmap: new Map(), // maybe this should be somewhere else
+  blackList: {
+    parcels: [],
+    deliveryPoints: [],
+  }
+
 }
 
 export const mapConstant = {
@@ -50,5 +55,6 @@ export const hyperParams = {
    radius_distance: 3,
    min_reward: 15,
    max_retry: 10,
+   blacklist_timeout: 30000,
   
 }

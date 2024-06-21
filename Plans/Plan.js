@@ -65,6 +65,11 @@ export class Plan {
     }
 
     async execute (){
+        if(!this.plan || this.plan.length==0 || this.stop){
+            Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `No plan to execute`);
+            return
+        }
+
         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Start Executing the plan`);
         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, "Plan object "+JSON.stringify(this.plan));
         let retry = 0

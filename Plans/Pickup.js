@@ -14,6 +14,7 @@ export class Pickup extends Plan{
         let parcelTile = `t_${this.intention.target.x}_${this.intention.target.y}`;
         let mapTiles =mapConstant.pddlTiles
         let mapNeighbors = mapConstant.pddlNeighbors
+        //for replanning
         if(obstacle){
             mapTiles = removeArbitraryStringPatterns(mapConstant.pddlTiles,obstacle)
             mapNeighbors = removeArbitraryStringPatterns(mapConstant.pddlNeighbors,obstacle)
@@ -39,9 +40,9 @@ export class Pickup extends Plan{
         let problem = pddlProblem.toPddlString();
 
         console.groupCollapsed("Generating plan");
-        super.plan = await onlineSolver(Plan.domain, problem);
+        this.plan = await onlineSolver(Plan.domain, problem);
         console.groupEnd()
-        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan generated: ${super.plan}`);
+        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan generated: ${JSON.stringify(this.plan)}`);
     }
 
     // async execute(){

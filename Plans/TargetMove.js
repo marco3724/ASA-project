@@ -17,6 +17,8 @@ export class TargetMove extends Plan{
         let destinationTile = `t_${intention.target.x}_${intention.target.y}`
         let mapTiles =mapConstant.pddlTiles
         let mapNeighbors = mapConstant.pddlNeighbors
+        
+        //for replanning
         if(obstacle){
             mapTiles = removeArbitraryStringPatterns(mapConstant.pddlTiles,obstacle)
             mapNeighbors = removeArbitraryStringPatterns(mapConstant.pddlNeighbors,obstacle)
@@ -38,9 +40,9 @@ export class TargetMove extends Plan{
 
         let problem = pddlProblem.toPddlString();
         console.groupCollapsed("Generating plan");
-        super.plan = await onlineSolver(domain, problem);
+        this.plan = await onlineSolver(domain, problem);
         console.groupEnd()
-        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan generated: ${super.plan}`);
+        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan generated: ${JSON.stringify(this.plan)}`);
 
     //     let status,failed_movements=0
     //     let {me} = believes
