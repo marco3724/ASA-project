@@ -36,11 +36,6 @@ export class Intention{
              * 
              * Also what happens if the heatmap is not ready yet?
              */
-            // sort the heatmap
-            /**
-             * Inserire prob 5% che venga presa una cella a caso senza sorting
-             * Aggiungere decremento se cella non contiene parcel
-             */
             if (believes.heatmap.size > 0) {
                 let prob = Math.floor(Math.random() * 100);
                 if (prob <= 5) {
