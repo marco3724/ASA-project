@@ -14,6 +14,7 @@ client.onMap((width, height, tiles) => {
     mapConstant.mapX = width;
     mapConstant.mapY = height;
     mapConstant.map = new Array(mapConstant.mapX).fill(0).map( () => new Array(mapConstant.mapY).fill(0));
+    mapConstant.parcelSpawner = [];
 
     tiles.forEach((tile) => {
         // each tile has this format: { x: 0, y: 0, delivery: t/f, parcelSpawner: t/f }
@@ -28,6 +29,7 @@ client.onMap((width, height, tiles) => {
          * the agent will be more likely to go there.
          */
         if (tile.parcelSpawner) {
+            mapConstant.parcelSpawner.push({x: tile.x, y: tile.y});
             believes.heatmap.set(`t_${tile.x}_${tile.y}`, {x: tile.x, y: tile.y, currentParcelId: null, prob: 1});
         } else {
             believes.heatmap.set(`t_${tile.x}_${tile.y}`, {x: tile.x, y: tile.y, currentParcelId: null, prob: 0});
@@ -100,7 +102,27 @@ client.onYou( ( {id, name, x, y, score} ) => {
     believes.me.y = Math.floor(y)
     believes.me.score = score
     if(logBelieves)
-        Logger.logEvent(Logger.logType.BELIEVES,Logger.logLevels.INFO,"Me: "+JSON.stringify(believes.me))  
+        Logger.logEvent(Logger.logType.BELIEVES,Logger.logLevels.INFO,"Me: "+JSON.stringify(believes.me))
+
+    //Update heatmap
+    let maxViewingDistance = believes.config.PARCELS_OBSERVATION_DISTANCE
+    for (let i = 0; i < maxViewingDistance; i++) {
+        for (let j = 0; j < maxViewingDistance; j++) {
+            let x = believes.me.x + i;
+            let y = believes.me.y + j;
+            if (believes.heatmap.has(`t_${x}_${y}`)) {
+                let tileInfo = believes.heatmap.get(`t_${x}_${y}`);
+                // if the probability is not zero and the tile is not a parcel spawner
+                if (tileInfo.prob > 0 && !mapConstant.parcelSpawner.some(spawner => spawner.x == x && spawner.y == y)) {
+                    // if there isn't a parcel on this tile, decrease the probability
+                    if (!believes.parcels.some(p => p.x == x && p.y == y)) {
+                        believes.heatmap.set(`t_${x}_${y}`, {...tileInfo, currentParcelId: null, prob: tileInfo.prob - hyperParams.heatmap_decading});
+                    }
+                }
+            }
+        }
+    }
+    console.log([...believes.heatmap.entries()])
 } )
 
 
