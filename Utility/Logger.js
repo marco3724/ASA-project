@@ -1,8 +1,8 @@
 export const Logger = {
-    currentLogLevel: 1,
+    currentLogLevel: 2,
     logLevels: {
-        INFO: 1,
-        DEBUG: 2
+        INFO: 2,
+        DEBUG: 1
     },
     logType:{
         INTENTION: '\x1b[32mINTENTION \x1b[0m',
