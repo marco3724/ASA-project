@@ -63,6 +63,8 @@ export class Pickup extends Plan{
                     Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Step ${index}: ${step.x}, ${step.y}`);
                     
                     action = `MOVE-${step.movement.toUpperCase()}`;
+                    // In this case step.x and step.y differ from the second argument of args of the onlineSolver
+                    // In the future, maybe this would become step.x -1 and step.y -1 to represent the current position of the agent before the move, to match the onlineSolver
                     args = ["AGENT1", `T_${step.x}_${step.y}`, `T_${generated_plan[index].x}_${generated_plan[index].y}`];
                     
                     this.plan.push({
@@ -80,7 +82,7 @@ export class Pickup extends Plan{
                 });
             }
         } else {
-            this.plan = await onlineSolver(domain, problem);
+            this.plan = await onlineSolver(Plan.domain, problem);
         }
         console.groupEnd()
         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan generated: ${JSON.stringify(this.plan)}`);

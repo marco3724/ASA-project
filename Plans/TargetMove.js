@@ -56,14 +56,11 @@ export class TargetMove extends Plan{
             generated_plan.forEach((step, index) => {
                 let action;
                 let args;
-                if (index !== generated_plan.length - 1) {
-                    // Here we are processing a move action
-                    action = `MOVE-${step.movement.toUpperCase()}`;
-                    args = ["AGENT1", `T_${step.x}_${step.y}`, `T_${generated_plan[index + 1].x}_${generated_plan[index + 1].y}`];
-                }
+                action = `MOVE-${step.movement.toUpperCase()}`;
+                args = ["AGENT1", `T_${step.x}_${step.y}`, `T_${generated_plan[index].x}_${generated_plan[index].y}`];
 
-                if (action !== undefined) // if it is not the last step
-                    this.plan.push({ "parallel": false, "action": action, "args": args });
+                this.plan.push({"parallel":false, "action": action, "args": args});
+                
             });
         } else {
             this.plan = await onlineSolver(domain, problem);
