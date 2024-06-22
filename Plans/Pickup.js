@@ -1,9 +1,9 @@
-
 import { Plan } from "./Plan.js";
 import { onlineSolver, PddlProblem } from "@unitn-asa/pddl-client";
-import { mapConstant, believes } from "../Believes.js";  
+import { mapConstant, believes, launchConfig } from "../Believes.js";  
 import { Logger } from "../Utility/Logger.js";
 import { removeArbitraryStringPatterns } from "../Utility/utility.js";
+import * as astar from "../Utility/astar.js";
 export class Pickup extends Plan{
     constructor(intention) {
         super()
@@ -20,6 +20,13 @@ export class Pickup extends Plan{
             mapNeighbors = removeArbitraryStringPatterns(mapConstant.pddlNeighbors,obstacle)
             Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, JSON.stringify(mapTiles));
             Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, JSON.stringify(mapNeighbors));
+
+            // update the graph
+            let mapWithObstacle = mapConstant.map;
+            let obstacleCoordinates = obstacle.split("_");
+            // Set to 0 the tile where the obstacle is
+            mapWithObstacle[parseInt(obstacleCoordinates[1])][parseInt(obstacleCoordinates[2])] = 0;
+            current_graph = new astar.Graph(mapWithObstacle);
         }
 
 
@@ -40,8 +47,40 @@ export class Pickup extends Plan{
         let problem = pddlProblem.toPddlString();
 
         console.groupCollapsed("Generating plan");
-        this.plan = await onlineSolver(Plan.domain, problem);
-        if(!this.plan){
+        if (launchConfig.offLineSolver) {
+            let current_pos = current_graph.grid[Math.round(believes.me.x)][Math.round(believes.me.y)];
+            let target = current_graph.grid[this.intention.target.x][this.intention.target.y];
+            let generated_plan = astar.astar.search(current_graph, current_pos, target, {diagonal: false});
+            this.plan = [];
+            generated_plan.forEach((step, index) => {
+                // log the step coordinates
+                Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Step ${index}: ${step.x}, ${step.y}`);
+                let action;
+                let args;
+                if (index !== generated_plan.length - 1) {
+                    // Here we are processing a move action
+                    action = `MOVE-${step.movement.toUpperCase()}`;
+                    args = ["AGENT1", `T_${step.x}_${step.y}`, `T_${generated_plan[index + 1].x}_${generated_plan[index + 1].y}`];
+                } else {
+                    // Here we are processing the pick-up action
+                    action = "PICK-UP";
+                    args = ["AGENT1", `PARCEL1`, `T_${this.intention.target.x}_${this.intention.target.y}`];
+                }
+
+                this.plan.push({
+                    "parallel": false,
+                    "action": action,
+                    "args": args
+                });
+            });
+        } else {
+            this.plan = await onlineSolver(domain, problem);
+        }
+        console.groupEnd()
+        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan generated: ${JSON.stringify(this.plan)}`);
+        
+        // if the plan is empty, it means that the astar algorithm has not found a path to the target
+        if(!this.plan || this.plan.length == 0){
             //it can be uncreachable due to 2 reasons: 1. the parcelsis unreachable 2. the parcels is blocked by an agent
             //in either case ignor it, if it is blocked by an agent, the agent will probably try to take it
             Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO,`Blacklist the parcel: Can't reach the target ${parcelTile} from ${believes.me.x},${believes.me.y}`); 
@@ -60,8 +99,6 @@ export class Pickup extends Plan{
             this.stop = true;
             return;
         }
-        console.groupEnd()
-        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan generated: ${JSON.stringify(this.plan)}`);
     }
 
     // async execute(){

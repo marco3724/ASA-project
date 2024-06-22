@@ -1,8 +1,9 @@
 import { Plan } from "./Plan.js";
 import { onlineSolver, PddlProblem } from "@unitn-asa/pddl-client";
-import { mapConstant, believes ,hyperParams} from "../Believes.js";
+import { mapConstant, believes, hyperParams, launchConfig} from "../Believes.js";
 import { Logger } from "../Utility/Logger.js";
 import { removeArbitraryStringPatterns } from "../Utility/utility.js";
+import * as astar from "../Utility/astar.js";
 
 export class Putdown extends Plan{
     constructor(intention) {
@@ -42,7 +43,19 @@ export class Putdown extends Plan{
         let problem = pddlProblem.toPddlString();
         //Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, "Problem: "+problem);
         console.groupCollapsed("Generating plan");
-        this.plan = await onlineSolver(Plan.domain, problem);
+        if (launchConfig.offLineSolver) {
+            let current_pos = mapConstant.graph.grid[Math.round(believes.me.x)][Math.round(believes.me.y)];
+            let target = mapConstant.graph.grid[this.intention.target.x][this.intention.target.y];
+            let generated_plan = astar.astar.search(mapConstant.graph, current_pos, target, {diagonal: false});
+            this.plan = [];
+            generated_plan.forEach(step => {
+                this.plan.push({"action": `MOVE-${step.movement.toUpperCase()}`})
+            });
+            this.plan.push({"action": "PUT-DOWN"});
+        } else {
+            this.plan = await onlineSolver(domain, problem);
+        }
+
         if (!this.plan) {
 
             //it can't be uncreachable due to 2 reasons: 1. the delivery point is unreachable 2. the delivery point is blocked by an obstacle (agent that may be blocked by us, or it is stuck internally)

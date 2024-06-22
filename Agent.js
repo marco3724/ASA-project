@@ -1,12 +1,12 @@
 import {distance,nearestDelivery,readFile} from "./Utility/utility.js"
 import * as astar from "./Utility/astar.js"
-import {mapConstant,hyperParams,believes,client} from "./Believes.js"
+import {mapConstant,hyperParams,believes,client, launchConfig} from "./Believes.js"
 import {Intention} from "./Intention.js"
 import { Plan } from "./Plans/Plan.js"
 import { Logger } from "./Utility/Logger.js"
 //Setup
-const logBelieves = (process.argv.includes('-b') || process.argv.includes('--believe')) 
-
+const logBelieves = (process.argv.includes('-b') || process.argv.includes('--believe'))
+launchConfig.offLineSolver = (process.argv.includes('-o') || process.argv.includes('--offline'))
 
 
 //Updating Believes

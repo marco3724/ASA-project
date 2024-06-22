@@ -85,7 +85,7 @@ export class Plan {
                     if(actionName.includes("MOVE")){  
                         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Replanning to avoid obstacle`);
                         let obstacle =  this.plan[i].args[2].toLowerCase()//the tile that is blocking me
-                        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, `Obstacle to avoid ${obstacle}`);
+                        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Obstacle to avoid ${obstacle}`);
                         await this.generatePlan(obstacle)
                         
                         if(!this.plan){//it means the intention is not achieavable

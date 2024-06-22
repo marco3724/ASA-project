@@ -1,8 +1,9 @@
-import {believes,mapConstant,client} from "../Believes.js"
+import {believes,mapConstant,client, launchConfig} from "../Believes.js"
 import {onlineSolver, PddlProblem} from "@unitn-asa/pddl-client";
 import {Plan} from "./Plan.js"
 import { Logger } from "../Utility/Logger.js";
 import {removeArbitraryStringPatterns} from "../Utility/utility.js";
+import * as astar from "../Utility/astar.js"
 export class TargetMove extends Plan{
     constructor(intention,intentionRevision){
         super()
@@ -17,6 +18,7 @@ export class TargetMove extends Plan{
         let destinationTile = `t_${intention.target.x}_${intention.target.y}`
         let mapTiles =mapConstant.pddlTiles
         let mapNeighbors = mapConstant.pddlNeighbors
+        let current_graph = mapConstant.graph;
         
         //for replanning
         if(obstacle){
@@ -24,6 +26,12 @@ export class TargetMove extends Plan{
             mapNeighbors = removeArbitraryStringPatterns(mapConstant.pddlNeighbors,obstacle)
             Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, JSON.stringify(mapTiles));
             Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, JSON.stringify(mapNeighbors));
+
+            // update the graph
+            let mapWithObstacle = mapConstant.map;
+            let obstacleCoordinates = obstacle.split("_");
+            mapWithObstacle[parseInt(obstacleCoordinates[1])][parseInt(obstacleCoordinates[2])] = 0;
+            current_graph = new astar.Graph(mapWithObstacle);
         }
 
         let pddlProblem = new PddlProblem(
@@ -40,7 +48,29 @@ export class TargetMove extends Plan{
 
         let problem = pddlProblem.toPddlString();
         console.groupCollapsed("Generating plan");
-        this.plan = await onlineSolver(domain, problem);
+        if (launchConfig.offLineSolver) {
+            let current_pos = current_graph.grid[Math.round(believes.me.x)][Math.round(believes.me.y)];
+            let target = current_graph.grid[intention.target.x][intention.target.y];
+            let generated_plan = astar.astar.search(current_graph, current_pos, target, {diagonal: false});
+            this.plan = [];
+            generated_plan.forEach((step, index) => {
+                let action;
+                let args;
+                if (index !== generated_plan.length - 1) {
+                    // Here we are processing a move action
+                    action = `MOVE-${step.movement.toUpperCase()}`;
+                    args = ["AGENT1", `T_${step.x}_${step.y}`, `T_${generated_plan[index + 1].x}_${generated_plan[index + 1].y}`];
+                }
+
+                if (action !== undefined) // if it is not the last step
+                    this.plan.push({ "parallel": false, "action": action, "args": args });
+            });
+        } else {
+            this.plan = await onlineSolver(domain, problem);
+        }
+        //             for (let i =0;i < result.length;i++){
+        //                 const direction = result[i].movement
+        //                 status = await client.move(direction)
         console.groupEnd()
         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan generated: ${JSON.stringify(this.plan)}`);
 
