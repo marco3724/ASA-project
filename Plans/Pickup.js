@@ -54,6 +54,17 @@ export class Pickup extends Plan{
             let action = "PICK-UP";
             let args = ["AGENT1", `PARCEL1`, `T_${this.intention.target.x}_${this.intention.target.y}`];
             this.offlineSolver(current_graph,this.intention.target,action,args);
+            //to simulate the online solver, if the parcel is in the same position as the agent, the astar will return null, while online solver return the pickup
+            if(this.plan == null){
+                if(this.intention.target.x === believes.me.x && this.intention.target.y === believes.me.y){ 
+                    this.plan = [];
+                    this.plan.push({
+                        "parallel": false,
+                        "action": action,
+                        "args": args
+                    });
+                }
+            }
         } else {
             this.plan = await onlineSolver(Plan.domain, problem);
         }

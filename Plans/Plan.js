@@ -51,11 +51,8 @@ export class Plan {
         [ 'PUT-DOWN', async  (l)=> {
             let status = await client.putdown() 
             if(status && status.length>0){ //update the believes (because the believes are updated before the action is executed)
-                for(let i= 0; i< status.length;i++){// i want to remove all the parcels that i have put down
-                    believes.parcels = believes.parcels.filter(p=>p.id!==status[i].id)
-                }
-
-                
+                const statusIds = status.map(s => s.id);
+                believes.parcels = believes.parcels.filter(p => !statusIds.includes(p.id));
             }
             return status
         }]
@@ -64,7 +61,7 @@ export class Plan {
         this.plan = null
         this.stop = false  
     }
-    //geenratePlan Interface
+    //generatePlan Interface
     async generatePlan(){
         throw new Error("generatePlan is not implemented")
     }
