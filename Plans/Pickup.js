@@ -23,11 +23,13 @@ export class Pickup extends Plan{
             Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, JSON.stringify(mapNeighbors));
 
             // update the graph
-            let mapWithObstacle = mapConstant.map;
-            let obstacleCoordinates = obstacle.split("_");
-            // Set to 0 the tile where the obstacle is
-            mapWithObstacle[parseInt(obstacleCoordinates[1])][parseInt(obstacleCoordinates[2])] = 0;
-            current_graph = new astar.Graph(mapWithObstacle);
+            if(launchConfig.offLineSolver){
+                let mapWithObstacle = mapConstant.map;
+                let obstacleCoordinates = obstacle.split("_");
+                // Set to 0 the tile where the obstacle is
+                mapWithObstacle[parseInt(obstacleCoordinates[1])][parseInt(obstacleCoordinates[2])] = 0;
+                current_graph = new astar.Graph(mapWithObstacle);
+        }
         }
 
 
@@ -49,48 +51,18 @@ export class Pickup extends Plan{
 
         console.groupCollapsed("Generating plan");
         if (launchConfig.offLineSolver) {
-            let current_pos = current_graph.grid[Math.round(believes.me.x)][Math.round(believes.me.y)];
-            let target = current_graph.grid[this.intention.target.x][this.intention.target.y];
-            let generated_plan = astar.astar.search(current_graph, current_pos, target, {diagonal: false});
-            this.plan = [];
-            let action;
-            let args;
-            if (generated_plan.length == 0) {
-                this.plan = null;
-            } else {
-                generated_plan.forEach((step, index) => {
-                    // log the step coordinates
-                    Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Step ${index}: ${step.x}, ${step.y}`);
-                    
-                    action = `MOVE-${step.movement.toUpperCase()}`;
-                    // In this case step.x and step.y differ from the second argument of args of the onlineSolver
-                    // In the future, maybe this would become step.x -1 and step.y -1 to represent the current position of the agent before the move, to match the onlineSolver
-                    args = ["AGENT1", `T_${step.x}_${step.y}`, `T_${generated_plan[index].x}_${generated_plan[index].y}`];
-                    
-                    this.plan.push({
-                        "parallel": false,
-                        "action": action,
-                        "args": args
-                    });
-                });
-                action = "PICK-UP";
-                args = ["AGENT1", `PARCEL1`, `T_${this.intention.target.x}_${this.intention.target.y}`];
-                this.plan.push({
-                    "parallel": false,
-                    "action": action,
-                    "args": args
-                });
-            }
+            let action = "PICK-UP";
+            let args = ["AGENT1", `PARCEL1`, `T_${this.intention.target.x}_${this.intention.target.y}`];
+            this.offlineSolver(current_graph,this.intention.target,action,args);
         } else {
             this.plan = await onlineSolver(Plan.domain, problem);
         }
         console.groupEnd()
         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan generated: ${JSON.stringify(this.plan)}`);
         
-        // if the plan is empty, it means that the astar algorithm has not found a path to the target
         if(!this.plan){
-            //it can be uncreachable due to 2 reasons: 1. the parcelsis unreachable 2. the parcels is blocked by an agent
-            //in either case ignor it, if it is blocked by an agent, the agent will probably try to take it
+            //it can be uncreachable due to 2 reasons: 1. the parcels is unreachable 2. the parcels is blocked by an agent
+            //in either case ignore it, if it is blocked by an agent, the agent will probably try to take it
             Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO,`Blacklist the parcel: Can't reach the target ${parcelTile} from ${believes.me.x},${believes.me.y}`); 
             
             //add the parcel the black list

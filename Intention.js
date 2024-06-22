@@ -17,6 +17,7 @@ export class Intention{
         // }
         // return new RandomMove() //is there is no action available i will move randomly
         console.groupEnd()
+        Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.INFO, `Parcels: ${JSON.stringify(believes.parcels)}`);
         if (believes.parcels.some(p => p.carriedBy === believes.me.id) // if i have some package i may want to deliver
             && believes.parcels.filter(p => p.carriedBy === null && distance(believes.me, p)<hyperParams.radius_distance).length==0) { //if there are no package near me i deliver, other i pick up
             let nearestDelivery = believes.deliveryPoints.sort((a, b) => distance(believes.me, a) - distance(believes.me, b))[0]

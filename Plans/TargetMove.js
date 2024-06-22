@@ -28,10 +28,12 @@ export class TargetMove extends Plan{
             Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, JSON.stringify(mapNeighbors));
 
             // update the graph
+            if(launchConfig.offLineSolver){
             let mapWithObstacle = mapConstant.map;
             let obstacleCoordinates = obstacle.split("_");
             mapWithObstacle[parseInt(obstacleCoordinates[1])][parseInt(obstacleCoordinates[2])] = 0;
             current_graph = new astar.Graph(mapWithObstacle);
+        }
         }
 
         let pddlProblem = new PddlProblem(
@@ -47,21 +49,10 @@ export class TargetMove extends Plan{
         );
 
         let problem = pddlProblem.toPddlString();
+        
         console.groupCollapsed("Generating plan");
         if (launchConfig.offLineSolver) {
-            let current_pos = current_graph.grid[Math.round(believes.me.x)][Math.round(believes.me.y)];
-            let target = current_graph.grid[intention.target.x][intention.target.y];
-            let generated_plan = astar.astar.search(current_graph, current_pos, target, {diagonal: false});
-            this.plan = [];
-            generated_plan.forEach((step, index) => {
-                let action;
-                let args;
-                action = `MOVE-${step.movement.toUpperCase()}`;
-                args = ["AGENT1", `T_${step.x}_${step.y}`, `T_${generated_plan[index].x}_${generated_plan[index].y}`];
-
-                this.plan.push({"parallel":false, "action": action, "args": args});
-                
-            });
+            this.offlineSolver(current_graph,intention.target)
         } else {
             this.plan = await onlineSolver(domain, problem);
         }
