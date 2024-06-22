@@ -14,6 +14,7 @@ export class Pickup extends Plan{
         let parcelTile = `t_${this.intention.target.x}_${this.intention.target.y}`;
         let mapTiles =mapConstant.pddlTiles
         let mapNeighbors = mapConstant.pddlNeighbors
+        let current_graph = mapConstant.graph;
         //for replanning
         if(obstacle){
             mapTiles = removeArbitraryStringPatterns(mapConstant.pddlTiles,obstacle)
@@ -52,27 +53,32 @@ export class Pickup extends Plan{
             let target = current_graph.grid[this.intention.target.x][this.intention.target.y];
             let generated_plan = astar.astar.search(current_graph, current_pos, target, {diagonal: false});
             this.plan = [];
-            generated_plan.forEach((step, index) => {
-                // log the step coordinates
-                Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Step ${index}: ${step.x}, ${step.y}`);
-                let action;
-                let args;
-                if (index !== generated_plan.length - 1) {
-                    // Here we are processing a move action
+            let action;
+            let args;
+            if (generated_plan.length == 0) {
+                this.plan = null;
+            } else {
+                generated_plan.forEach((step, index) => {
+                    // log the step coordinates
+                    Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Step ${index}: ${step.x}, ${step.y}`);
+                    
                     action = `MOVE-${step.movement.toUpperCase()}`;
-                    args = ["AGENT1", `T_${step.x}_${step.y}`, `T_${generated_plan[index + 1].x}_${generated_plan[index + 1].y}`];
-                } else {
-                    // Here we are processing the pick-up action
-                    action = "PICK-UP";
-                    args = ["AGENT1", `PARCEL1`, `T_${this.intention.target.x}_${this.intention.target.y}`];
-                }
-
+                    args = ["AGENT1", `T_${step.x}_${step.y}`, `T_${generated_plan[index].x}_${generated_plan[index].y}`];
+                    
+                    this.plan.push({
+                        "parallel": false,
+                        "action": action,
+                        "args": args
+                    });
+                });
+                action = "PICK-UP";
+                args = ["AGENT1", `PARCEL1`, `T_${this.intention.target.x}_${this.intention.target.y}`];
                 this.plan.push({
                     "parallel": false,
                     "action": action,
                     "args": args
                 });
-            });
+            }
         } else {
             this.plan = await onlineSolver(domain, problem);
         }
@@ -80,7 +86,7 @@ export class Pickup extends Plan{
         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan generated: ${JSON.stringify(this.plan)}`);
         
         // if the plan is empty, it means that the astar algorithm has not found a path to the target
-        if(!this.plan || this.plan.length == 0){
+        if(!this.plan){
             //it can be uncreachable due to 2 reasons: 1. the parcelsis unreachable 2. the parcels is blocked by an agent
             //in either case ignor it, if it is blocked by an agent, the agent will probably try to take it
             Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO,`Blacklist the parcel: Can't reach the target ${parcelTile} from ${believes.me.x},${believes.me.y}`); 
