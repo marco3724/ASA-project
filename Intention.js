@@ -7,19 +7,12 @@ import { distance } from './Utility/utility.js';
 import { Logger } from './Utility/Logger.js';
 export class Intention{
     generateAndFilterOptions(){
-        // if(believes.parcels.some(p=>p.carriedBy==believes.me.id)){ //if i am carrying some parcel i want to deliver
-        //     let nearestDelivery = believes.deliveryPoints.sort((a,b)=>distance(believes.me,a)-distance(believes.me,b))[0]
-        //     return new Putdown({target:nearestDelivery});
-        // } else 
-        // if(believes.parcels.filter(p =>p.carriedBy === null && p.carriedBy != believes.me.id).length !== 0){ //if there are parcel that are not picked by anyone i want to  pick
-        //     let nearestParcel = believes.parcels.filter(p =>p.carriedBy != believes.me.id).sort((a,b)=>distance(believes.me,a)-distance(believes.me,b))[0]
-        //     return new Pickup({target:nearestParcel})
-        // }
-        // return new RandomMove() //is there is no action available i will move randomly
         console.groupEnd()
         Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.INFO, `Parcels: ${JSON.stringify(believes.parcels)}`);
         if (believes.parcels.some(p => p.carriedBy === believes.me.id) // if i have some package i may want to deliver
-            && believes.parcels.filter(p => p.carriedBy === null && distance(believes.me, p)<hyperParams.radius_distance).length==0) { //if there are no package near me i deliver, other i pick up
+            && believes.parcels.filter(p => p.carriedBy === null && distance(believes.me, p)<hyperParams.radius_distance).length==0 //if there are no package near me i deliver, otherwise i pick up
+            && believes.deliveryPoints.length > 0 //if there are no non blocked delivery points, i won't deliver for now, i could also reinstate the blocked delivery points, but if the reinstated delivery point is blocked again i would have a loop and basically do nothing ( so we need to wait the blacklist of the delivery points), so if there are no delivery point avbailable is better to pick other packet
+        ) { 
             let nearestDelivery = believes.deliveryPoints.sort((a, b) => distance(believes.me, a) - distance(believes.me, b))[0]
             Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Deliver parcel to ${nearestDelivery.x}, ${nearestDelivery.y}`);
             console.group()
@@ -101,7 +94,7 @@ export class Intention{
         const {intention} = plan
         Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO,'Starting to revise target move')
         while ( !plan.stop ) {
-            if (believes.parcels.length>0){ //if i sense some parcel, instead of exploring i want to pick that parcel
+            if (believes.parcels.some(p => p.carriedBy === believes.me.id).length>0){ //if i sense some parcel (that is not already carried by me), instead of exploring i want to pick that parcel
                 plan.stop = true
             }
             await new Promise( res => setImmediate( res ) );
