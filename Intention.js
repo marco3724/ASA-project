@@ -1,9 +1,9 @@
-import { believes, hyperParams } from './Believes.js';
+import { believes, hyperParams, mapConstant } from './Believes.js';
 import { Pickup } from './Plans/Pickup.js';
 import { Putdown } from './Plans/Putdown.js';
 import {RandomMove} from './Plans/RandomMove.js'
 import { TargetMove } from './Plans/TargetMove.js'
-import { distance } from './Utility/utility.js';
+import { distance,isParcelOnPath } from './Utility/utility.js';
 import { Logger } from './Utility/Logger.js';
 export class Intention{
     generateAndFilterOptions(){
@@ -66,17 +66,22 @@ export class Intention{
         else if(plan instanceof TargetMove)
             this.reviseTargetMove(plan)
     }
-    //do the revision for everyplan TODO
+    
     async revisePickUp(plan){
         const {intention} = plan
         Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO,'Starting to revise pick up')
         while ( !plan.stop ) {
-            if (!believes.parcels.some(p=>(p.id==intention.target.id))){ //if the parcel is not there anymore
+            //if i can't sense the parcel and that parcel is within my view, it mean that is gone or someone took it, so stop, but if it is outside of my view the parcel may still be there
+            if (!believes.parcels.some(p=>(p.id==intention.target.id)) && 
+            distance(intention.target,believes.me)<believes.config.PARCELS_OBSERVATION_DISTANCE-1){ //this solve the problem of the parcel that is outside of the view once i have the intention to pick it
                 plan.stop = true
             }
-            await new Promise( res => setImmediate( res ) );
+            // if(believes.parcels.filter(p => p.carriedBy === null && p.id!== intention.target.id && distance(believes.me, p)<distance(believes.me,intention.target)).length>0) //if a parcel is nearer than the one i'm trying to pick up, i want to pick that parcel
+            //     plan.stop = true
+             await new Promise( res => setImmediate( res ) );
         }  
     }
+
     async revisePutDown(plan){
         const {intention} = plan
         Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO,'Starting to revise put down')
