@@ -94,7 +94,9 @@ export class Intention{
         const {intention} = plan
         Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO,'Starting to revise target move')
         while ( !plan.stop ) {
-            if (believes.parcels.some(p => p.carriedBy === believes.me.id).length>0){ //if i sense some parcel (that is not already carried by me), instead of exploring i want to pick that parcel
+            //if i sense some parcel (that is not already carried by anyone), instead of exploring i want to pick that parcel 
+            //(the carried by null condition needed only when no delivery point is aviailable, because the agent keep sensing his packet and stop the target move, but we don't want that)
+            if (believes.parcels.filter(p => p.carriedBy == null).length>0){ 
                 plan.stop = true
             }
             await new Promise( res => setImmediate( res ) );
