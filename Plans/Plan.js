@@ -59,6 +59,7 @@ export class Plan {
     ])
     constructor(){
         this.plan = null
+        this.index = 0
         this.stop = false  
     }
     //generatePlan Interface
@@ -101,19 +102,28 @@ export class Plan {
     }
 
     async execute (){
-        if(!this.plan || this.plan.length==0 || this.stop){
+        if(!this.plan || this.plan.length==0){
             Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `No plan to execute`);
+            return
+        }
+        if(this.stop){
+            Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan stopped due to revision`);
             return
         }
 
         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Start Executing the plan`);
         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, "Plan object "+JSON.stringify(this.plan));
         let retry = 0
-        for (let i = 0; i < this.plan.length; i++) {
-            let actionName = this.plan[i].action
+        for (this.index = 0; this.index < this.plan.length; this.index++) {
+            let actionName = this.plan[this.index].action
             let exec= this.actions.get(actionName)
             let status = await exec()
             Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.DEBUG, `status ${JSON.stringify(status)}`);
+
+            if(this.stop){
+                Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan stopped due to revision`);
+                return
+            }
 
             if(!status){
                 retry++ //since it has failed, increment the retry number
@@ -121,7 +131,7 @@ export class Plan {
                     //replanning
                     if(actionName.includes("MOVE")){  
                         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Replanning to avoid obstacle`);
-                        let obstacle =  this.plan[i].args[2].toLowerCase()//the tile that is blocking me
+                        let obstacle =  this.plan[this.index].args[2].toLowerCase()//the tile that is blocking me
                         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Obstacle to avoid ${obstacle}`);
                         await this.generatePlan(obstacle)
                         
@@ -131,22 +141,18 @@ export class Plan {
                             return //stop the plan
                         }
 
-                        i = -1 //so the next iteration can start with the new plan from 0
+                        this.index = -1 //so the next iteration can start with the new plan from 0
                         retry = 0 //reset the retry
                         continue
                     }
                     break //no replanning possible, stop the plan
                 }
                 Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, `Action ${actionName} failed, retrying ${retry} time`);
-                i--
+                this.index--
                 continue
             }
 
             retry = 0
-            if(this.stop){
-                Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan stopped due to revision`);
-                return
-            }
         }
         this.stop = true
         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan succesfully executed`);

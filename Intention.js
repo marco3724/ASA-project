@@ -1,16 +1,18 @@
-import { believes, hyperParams } from './Believes.js';
+import { believes, hyperParams, mapConstant } from './Believes.js';
 import { Pickup } from './Plans/Pickup.js';
 import { Putdown } from './Plans/Putdown.js';
 import {RandomMove} from './Plans/RandomMove.js'
 import { TargetMove } from './Plans/TargetMove.js'
-import { distance } from './Utility/utility.js';
+import { distance,isParcelOnPath } from './Utility/utility.js';
 import { Logger } from './Utility/Logger.js';
 export class Intention{
     generateAndFilterOptions(){
         console.groupEnd()
         Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.INFO, `Parcels: ${JSON.stringify(believes.parcels)}`);
         if (believes.parcels.some(p => p.carriedBy === believes.me.id) // if i have some package i may want to deliver
-            && believes.parcels.filter(p => p.carriedBy === null && distance(believes.me, p)<hyperParams.radius_distance).length==0) { //if there are no package near me i deliver, other i pick up
+            && believes.parcels.filter(p => p.carriedBy === null && distance(believes.me, p)<hyperParams.radius_distance).length==0 //if there are no package near me i deliver, otherwise i pick up
+            && believes.deliveryPoints.length > 0 //if there are no non blocked delivery points, i won't deliver for now, i could also reinstate the blocked delivery points, but if the reinstated delivery point is blocked again i would have a loop and basically do nothing ( so we need to wait the blacklist of the delivery points), so if there are no delivery point avbailable is better to pick other packet
+        ) { 
             let nearestDelivery = believes.deliveryPoints.sort((a, b) => distance(believes.me, a) - distance(believes.me, b))[0]
             Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Deliver parcel to ${nearestDelivery.x}, ${nearestDelivery.y}`);
             console.group()
@@ -79,17 +81,22 @@ export class Intention{
         else if(plan instanceof TargetMove)
             this.reviseTargetMove(plan)
     }
-    //do the revision for everyplan TODO
+    
     async revisePickUp(plan){
         const {intention} = plan
         Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO,'Starting to revise pick up')
         while ( !plan.stop ) {
-            if (!believes.parcels.some(p=>(p.id==intention.target.id))){ //if the parcel is not there anymore
+            //if i can't sense the parcel and that parcel is within my view, it mean that is gone or someone took it, so stop, but if it is outside of my view the parcel may still be there
+            if (!believes.parcels.some(p=>(p.id==intention.target.id)) && 
+            distance(intention.target,believes.me)<believes.config.PARCELS_OBSERVATION_DISTANCE-1){ //this solve the problem of the parcel that is outside of the view once i have the intention to pick it
                 plan.stop = true
             }
-            await new Promise( res => setImmediate( res ) );
+            // if(believes.parcels.filter(p => p.carriedBy === null && p.id!== intention.target.id && distance(believes.me, p)<distance(believes.me,intention.target)).length>0) //if a parcel is nearer than the one i'm trying to pick up, i want to pick that parcel
+            //     plan.stop = true
+             await new Promise( res => setImmediate( res ) );
         }  
     }
+
     async revisePutDown(plan){
         const {intention} = plan
         Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO,'Starting to revise put down')
@@ -107,7 +114,9 @@ export class Intention{
         const {intention} = plan
         Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO,'Starting to revise target move')
         while ( !plan.stop ) {
-            if (believes.parcels.length>0){ //if i sense some parcel, instead of exploring i want to pick that parcel
+            //if i sense some parcel (that is not already carried by anyone), instead of exploring i want to pick that parcel 
+            //(the carried by null condition needed only when no delivery point is aviailable, because the agent keep sensing his packet and stop the target move, but we don't want that)
+            if (believes.parcels.filter(p => p.carriedBy == null).length>0){ 
                 plan.stop = true
             }
             await new Promise( res => setImmediate( res ) );
