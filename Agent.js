@@ -31,8 +31,6 @@ client.onMap((width, height, tiles) => {
         if (tile.parcelSpawner) {
             mapConstant.parcelSpawner.push({x: tile.x, y: tile.y});
             believes.heatmap.set(`t_${tile.x}_${tile.y}`, {x: tile.x, y: tile.y, currentParcelId: null, prob: 1});
-        } else {
-            believes.heatmap.set(`t_${tile.x}_${tile.y}`, {x: tile.x, y: tile.y, currentParcelId: null, prob: 0});
         }
     });
     if(logBelieves)
