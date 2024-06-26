@@ -7,15 +7,6 @@ import { distance } from './Utility/utility.js';
 import { Logger } from './Utility/Logger.js';
 export class Intention{
     generateAndFilterOptions(){
-        // if(believes.parcels.some(p=>p.carriedBy==believes.me.id)){ //if i am carrying some parcel i want to deliver
-        //     let nearestDelivery = believes.deliveryPoints.sort((a,b)=>distance(believes.me,a)-distance(believes.me,b))[0]
-        //     return new Putdown({target:nearestDelivery});
-        // } else 
-        // if(believes.parcels.filter(p =>p.carriedBy === null && p.carriedBy != believes.me.id).length !== 0){ //if there are parcel that are not picked by anyone i want to  pick
-        //     let nearestParcel = believes.parcels.filter(p =>p.carriedBy != believes.me.id).sort((a,b)=>distance(believes.me,a)-distance(believes.me,b))[0]
-        //     return new Pickup({target:nearestParcel})
-        // }
-        // return new RandomMove() //is there is no action available i will move randomly
         console.groupEnd()
         Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.INFO, `Parcels: ${JSON.stringify(believes.parcels)}`);
         if (believes.parcels.some(p => p.carriedBy === believes.me.id) // if i have some package i may want to deliver
@@ -24,8 +15,15 @@ export class Intention{
             Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Deliver parcel to ${nearestDelivery.x}, ${nearestDelivery.y}`);
             console.group()
             return new Putdown({ target: nearestDelivery });
-        } else if (believes.parcels.filter(p => p.carriedBy === null && p.carriedBy != believes.me.id).length !== 0) {
+        } else if (believes.parcels.filter(p => p.carriedBy === null && p.carriedBy != believes.me.id).length !== 0) { // if there are parcels which are not carried by anyone
+            // Select the parcel which is nearest to me
             let nearestParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) => distance(believes.me, a) - distance(believes.me, b))[0]
+            /**
+             * A possible improvement could be to select the parcel
+             * which is deliverable
+             * By deliverable I mean that the parcel should have enough reward to be worth
+             * to be delivered (i.e. it doesnt make sense to go pick up a parcel which will dissapear before reaching the delivery point)
+             */
             Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Pick up parcel from ${nearestParcel.x}, ${nearestParcel.y}`);
             console.group()
             return new Pickup({ target: nearestParcel })
@@ -47,13 +45,21 @@ export class Intention{
                     return new TargetMove({ target: { x: target.x, y: target.y } });
                 } else {
                     let sortedHeatmap = new Map([...believes.heatmap.entries()].sort((a, b) => b[1].prob - a[1].prob));
-                
+                    Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.INFO, `Sorted heatmap: ${JSON.stringify([...sortedHeatmap.entries()].slice(0, 5))}`);
                     let possibleTargets = []
-                    let it = sortedHeatmap.values();
-                    for (let i = 0; i < 3; i++) {
-                        possibleTargets.push(it.next().value);
+                    const it = sortedHeatmap.values();
+                    let val = it.next();
+                    let maxCounter = val.value.prob;
+                    let excededThreshold = false;
+                    while (!val.done) {
+                        if (val.value.prob >= (maxCounter - hyperParams.counterThreshold)) {
+                            possibleTargets.push(val.value);
+                        } else {
+                            excededThreshold = true;
+                        }
+                        val = it.next();
                     }
-    
+                    
                     let random = Math.floor(Math.random() * possibleTargets.length);
                     let target = possibleTargets[random];
                     Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Exploring to ${target.x}, ${target.y}`);
