@@ -62,5 +62,6 @@ export const hyperParams = {
   max_retry: 50,
   heatmap_decading: 1, // this param is used to decrease the probability of a cell in the heatmap
   counterThreshold: 3,
+  highDensityThreshold: 2,
   blacklist_timeout: 30000
 }
