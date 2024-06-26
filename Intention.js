@@ -3,7 +3,7 @@ import { Pickup } from './Plans/Pickup.js';
 import { Putdown } from './Plans/Putdown.js';
 import {RandomMove} from './Plans/RandomMove.js'
 import { TargetMove } from './Plans/TargetMove.js'
-import { distance,isParcelOnPath } from './Utility/utility.js';
+import { distance } from './Utility/utility.js';
 import { Logger } from './Utility/Logger.js';
 export class Intention{
     generateAndFilterOptions(){
@@ -46,20 +46,33 @@ export class Intention{
                     let target = believes.heatmap.get(randomKey);
                     return new TargetMove({ target: { x: target.x, y: target.y } });
                 } else {
-                    let sortedHeatmap = new Map([...believes.heatmap.entries()].sort((a, b) => b[1].prob - a[1].prob));
-                    Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.INFO, `Sorted heatmap: ${JSON.stringify([...sortedHeatmap.entries()].slice(0, 5))}`);
+                    let sortMap = [...believes.heatmap.entries()].sort((a, b) => b[1].prob - a[1].prob);
+                    let maxDiff = sortMap[0][1].prob - sortMap[sortMap.length - 1][1].prob;
                     let possibleTargets = []
-                    const it = sortedHeatmap.values();
-                    let val = it.next();
-                    let maxCounter = val.value.prob;
-                    let excededThreshold = false;
-                    while (!val.done) {
-                        if (val.value.prob >= (maxCounter - hyperParams.counterThreshold)) {
-                            possibleTargets.push(val.value);
-                        } else {
-                            excededThreshold = true;
+                    /**
+                     * if the difference between the highest and the lowest probability is less than the threshold
+                     * then just take the 5 farthest tiles from me, and select one of them randomly
+                     *  */ 
+                    if (maxDiff < hyperParams.highDensityThreshold) {
+                        sortMap = sortMap.sort((a, b) => distance(believes.me, {x: a[1].x, y: a[1].y}) - distance(believes.me, {x: b[1].x, y: b[1].y}));
+                        sortMap.slice(0, 5).forEach((value) => {
+                            possibleTargets.push(value[1]);
+                        });
+                    } else {
+                        let sortedHeatmap = new Map(sortMap);
+                        Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.INFO, `Sorted heatmap: ${JSON.stringify([...sortedHeatmap.entries()].slice(0, 5))}`);
+                        const it = sortedHeatmap.values();
+                        let val = it.next();
+                        let maxCounter = val.value.prob;
+                        let excededThreshold = false;
+                        while (!val.done) {
+                            if (val.value.prob >= (maxCounter - hyperParams.counterThreshold)) {
+                                possibleTargets.push(val.value);
+                            } else {
+                                excededThreshold = true;
+                            }
+                            val = it.next();
                         }
-                        val = it.next();
                     }
                     
                     let random = Math.floor(Math.random() * possibleTargets.length);
