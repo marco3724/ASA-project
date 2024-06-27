@@ -104,9 +104,15 @@ export class Intention{
             distance(intention.target,believes.me)<believes.config.PARCELS_OBSERVATION_DISTANCE-1){ //this solve the problem of the parcel that is outside of the view once i have the intention to pick it
                 plan.stop = true
             }
-            // if(believes.parcels.filter(p => p.carriedBy === null && p.id!== intention.target.id && distance(believes.me, p)<distance(believes.me,intention.target)).length>0) //if a parcel is nearer than the one i'm trying to pick up, i want to pick that parcel
+
+            // if(believes.parcels.filter(p => {
+            //         p.carriedBy === null && 
+            //         p.id !== intention.target.id 
+            //         && distance(believes.me, p) < distance(believes.me,intention.target)
+            //         }).length > 0) {//if a parcel is nearer than the one i'm trying to pick up, i want to pick that parcel
             //     plan.stop = true
-             await new Promise( res => setImmediate( res ) );
+            // }
+            await new Promise( res => setImmediate( res ) );
         }  
     }
 
