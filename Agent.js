@@ -154,6 +154,7 @@ client.onParcelsSensing( async ( perceived_parcels ) => {
 
 client.onConfig( (config) => {
     believes.config = config
+    // here we set up the communication with the other agent
     const communication = new Communication(client);
     believes.config.rewardDecayRatio = 0
     if(believes.config.PARCEL_DECADING_INTERVAL=="infinite")
