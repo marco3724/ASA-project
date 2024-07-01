@@ -11,13 +11,15 @@ function handleMessage(id, name, msg, reply) {
         Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Received handshake from ${name}`);
         otherAgent.id = id;
         client.say(otherAgent.id, {
-            type: "test",
+            type: "ack",
+            senderId: client.id,
             content: "Received your ID"
         });
     }
 
-    if (msg.type === "test") {
-        Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Received test message from ${name}`);
+    if (msg.type === "ack") {
+        Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Received ack message from ${name}`);
+        otherAgent.id = msg.senderId;
     }
 
 }
