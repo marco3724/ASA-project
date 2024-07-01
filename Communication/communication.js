@@ -1,38 +1,40 @@
 import { DeliverooApi } from "@unitn-asa/deliveroo-js-client";
 import { Logger } from "../Utility/Logger.js";
 
-export class Communication {
-    otherAgent = { id: null };
-    constructor(deliverooClient) {
-        this.client = deliverooClient;
-        this.contactOtherAgent();
-        this.client.onMsg(this.handleMessage);
+let client = null;
+let otherAgent = {
+    id: "",
+};
+
+function handleMessage(id, name, msg, reply) {
+    if (msg.type === "handshake") {
+        Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Received handshake from ${name}`);
+        otherAgent.id = id;
+        client.say(otherAgent.id, {
+            type: "handshake",
+            content: "Received your ID"
+        });
     }
 
-    async contactOtherAgent() {
-        // send a message until the other agent responds
-        if (this.otherAgent.id == null) {
-            setInterval(async () => {
-                await this.client.shout({
-                    type: "handshake",
-                    content: "Hello, are you there?"
-                });
-            }, 1000);
-        } else {
-            clearInterval();
-        }
-    }
-
-    async handleMessage(id, name, msg, reply) {
-        if (msg.type == "handshake") {
-            this.otherAgent.id = id;
-            await this.client.say(this.otherAgent.id, "Hello, I'm here!");
-        }
-        
-        Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Received message from ${name} (${id}): ${msg}`);
-    }
-
-    async sendMessage(message) {
-        await this.client.say(otherAgent.id, message);
-    }
 }
+
+function initCommunication(deliverooClient) {
+    client = deliverooClient;
+    client.onMsg(handleMessage);
+
+    // send a broadcast message until the other agent responds
+    let intervalId = setInterval(async () => {
+        if (otherAgent.id === "") {
+            await client.shout({
+                type: "handshake",
+                content: "Hello Baozi"
+            });
+        } else {
+            clearInterval(intervalId);
+        }
+    }, 1000);
+}
+
+export {
+    initCommunication
+};
