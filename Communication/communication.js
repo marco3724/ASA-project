@@ -11,9 +11,13 @@ function handleMessage(id, name, msg, reply) {
         Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Received handshake from ${name}`);
         otherAgent.id = id;
         client.say(otherAgent.id, {
-            type: "handshake",
+            type: "test",
             content: "Received your ID"
         });
+    }
+
+    if (msg.type === "test") {
+        Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Received test message from ${name}`);
     }
 
 }
