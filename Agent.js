@@ -4,6 +4,7 @@ import {mapConstant,hyperParams,believes,client, launchConfig} from "./Believes.
 import {Intention} from "./Intention.js"
 import { Plan } from "./Plans/Plan.js"
 import { Logger } from "./Utility/Logger.js"
+import { Communication } from "./Communication/communication.js"
 //Setup
 const logBelieves = (process.argv.includes('-b') || process.argv.includes('--believe'))
 launchConfig.offLineSolver = (process.argv.includes('-o') || process.argv.includes('--offline'))
@@ -153,6 +154,7 @@ client.onParcelsSensing( async ( perceived_parcels ) => {
 
 client.onConfig( (config) => {
     believes.config = config
+    const communication = new Communication(client);
     believes.config.rewardDecayRatio = 0
     if(believes.config.PARCEL_DECADING_INTERVAL=="infinite")
         //min_reward = 0 TODO
