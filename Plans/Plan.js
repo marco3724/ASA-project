@@ -60,7 +60,8 @@ export class Plan {
     constructor(){
         this.plan = null
         this.index = 0
-        this.stop = false  
+        this.stop = false
+        this.planType = ""
     }
     //generatePlan Interface
     async generatePlan(){
@@ -157,6 +158,8 @@ export class Plan {
         this.stop = true
         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan succesfully executed`);
     }
-    
-    
+
+    get type() {
+        return this.planType
+    }
 }
