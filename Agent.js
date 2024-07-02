@@ -1,7 +1,7 @@
-import {distance,nearestDelivery,readFile} from "./Utility/utility.js"
+import { readFile } from "./Utility/utility.js"
 import * as astar from "./Utility/astar.js"
-import {mapConstant,hyperParams,believes,client, launchConfig} from "./Believes.js"
-import {Intention} from "./Intention.js"
+import { mapConstant, hyperParams, believes, client, launchConfig } from "./Believes.js"
+import { Intention } from "./Intention.js"
 import { Plan } from "./Plans/Plan.js"
 import { Logger } from "./Utility/Logger.js"
 import { initCommunication, sendIntention } from "./Communication/communication.js"
@@ -173,7 +173,7 @@ async function agentLoop(){
     while(true){
         let plan = intention.generateAndFilterOptions()
         // send the intention to the other agent
-        sendIntention(plan.type, plan.target);
+        await sendIntention(plan.type, plan.target);
         await plan.generatePlan()
         intention.revise(plan)
         await plan.execute()   
