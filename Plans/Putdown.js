@@ -9,6 +9,7 @@ export class Putdown extends Plan{
     constructor(intention) {
         super()
         this.intention = intention;
+        this.planType = "putdown";
     }
 
     async generatePlan(obstacle) {
@@ -95,6 +96,10 @@ export class Putdown extends Plan{
         }
         console.groupEnd()
         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan generated: ${JSON.stringify(this.plan)}`);
+    }
+
+    get target() {
+        return this.intention.target;
     }
 
 }
