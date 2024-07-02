@@ -4,7 +4,7 @@ import {mapConstant,hyperParams,believes,client, launchConfig} from "./Believes.
 import {Intention} from "./Intention.js"
 import { Plan } from "./Plans/Plan.js"
 import { Logger } from "./Utility/Logger.js"
-import { initCommunication } from "./Communication/communication.js"
+import { initCommunication, sendIntention } from "./Communication/communication.js"
 //Setup
 const logBelieves = (process.argv.includes('-b') || process.argv.includes('--believe'))
 launchConfig.offLineSolver = (process.argv.includes('-o') || process.argv.includes('--offline'))
@@ -172,6 +172,8 @@ async function agentLoop(){
     Plan.domain = await readFile('./domain.pddl' );
     while(true){
         let plan = intention.generateAndFilterOptions()
+        // send the intention to the other agent
+        sendIntention(plan.type, plan.target);
         await plan.generatePlan()
         intention.revise(plan)
         await plan.execute()   
