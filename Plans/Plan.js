@@ -117,7 +117,7 @@ export class Plan {
 
         //define how many time i can retry before replanning (for this plan)
         let max_retryTime = Math.floor(Math.random() * (hyperParams.retry.max_retry - hyperParams.retry.min_retry + 1) + hyperParams.retry.min_retry);
-        Logger.logEvent(Logger.logType.DEBUG, Logger.logLevels.INFO, `Max retry time ${max_retryTime}`);
+        Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.DEBUG, `Max retry time ${max_retryTime}`);
         for (this.index = 0; this.index < this.plan.length; this.index++) {
             let actionName = this.plan[this.index].action
             let exec= this.actions.get(actionName)
