@@ -114,6 +114,10 @@ export class Plan {
         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Start Executing the plan`);
         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, "Plan object "+JSON.stringify(this.plan));
         let retry = 0
+
+        //define how many time i can retry before replanning (for this plan)
+        let max_retryTime = Math.floor(Math.random() * (hyperParams.retry.max_retry - hyperParams.retry.min_retry + 1) + hyperParams.retry.min_retry);
+        Logger.logEvent(Logger.logType.DEBUG, Logger.logLevels.INFO, `Max retry time ${max_retryTime}`);
         for (this.index = 0; this.index < this.plan.length; this.index++) {
             let actionName = this.plan[this.index].action
             let exec= this.actions.get(actionName)
@@ -127,7 +131,7 @@ export class Plan {
 
             if(!status){
                 retry++ //since it has failed, increment the retry number
-                if(retry>hyperParams.max_retry){
+                if(retry>=max_retryTime){
                     //replanning
                     if(actionName.includes("MOVE")){  
                         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Replanning to avoid obstacle`);
