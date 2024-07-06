@@ -56,13 +56,17 @@ function initCommunication(deliverooClient) {
  * @param {Object} pos the target position of the intention
  */
 async function sendIntention(t, pos) {
-    await client.say(otherAgent.id, {
-        type: "intention",
-        content: {
-            type: t,
-            position: pos
-        }
-    });
+    // console.log(client);
+    if (client) {
+        await client.say(otherAgent.id, {
+            type: "intention",
+            content: {
+                type: t,
+                position: pos
+            }
+        });
+    }
+    return;
 }
 
 export {

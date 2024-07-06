@@ -173,7 +173,7 @@ async function agentLoop(){
     while(true){
         let plan = intention.generateAndFilterOptions()
         // send the intention to the other agent
-        await sendIntention(plan.type, plan.target);
+        // await sendIntention(plan.type, plan.target);
         await plan.generatePlan()
         intention.revise(plan)
         await plan.execute()   
