@@ -6,6 +6,9 @@ import { TargetMove } from './Plans/TargetMove.js'
 import { distance } from './Utility/utility.js';
 import { Logger } from './Utility/Logger.js';
 export class Intention{
+    constructor(){
+        this.queue = [] //the idea is that when stopping a plan there are 2 possibility, 1 that we still want to keep that intention, 2 we dont want to for example we change a put down with a pick up, and we dont want to keet the put down because we in picky another parcel we may want to deliver in another place
+    }
     generateAndFilterOptions(){
         console.groupEnd()
         Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.INFO, `Parcels: ${JSON.stringify(believes.parcels)}`);
@@ -18,17 +21,49 @@ export class Intention{
             console.group()
             return new Putdown({ target: nearestDelivery });
         } else if (believes.parcels.filter(p => p.carriedBy === null && p.carriedBy != believes.me.id).length !== 0) { // if there are parcels which are not carried by anyone
-            // Select the parcel which is nearest to me
-            let nearestParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) => distance(believes.me, a) - distance(believes.me, b))[0]
+            let crowdness = 0
+            let bestParcel = []
+            //calculate the crowdness
+            believes.agentsPosition.forEach((agent) => {   // TODO will exclude the friends from the crowdness
+                //hyperParams.radius_distance*believes.config.MOVEMENT_DURATION
+                // the unseen paramter is updated for every step, 
+                console.log(agent)
+                // so we want to check the agent that has moved for radius distance, we need to multiply the radius distance with the movement duration (???)
+                // radius distance = unseen/ movement duration value.unseen<hyperParams.radius_distance*believes.config.MOVEMENT_DURATION 
+                // adding this  && distance(believes.me, agent) < hyperParams.radius_distance woul be less crwoded, we need to test TODO
+                if (agent.unseen<hyperParams.radius_distance) {
+                    crowdness += 1
+                }
+            })
+            console.log(crowdness)
+            let intentionReason = ""
+            //if very crowded or there is no reward variance, i want to pick up the parcel with that is the nearest (need to be less pretentious)
+            if (crowdness > hyperParams.crowdedThreshold || believes.config.PARCEL_REWARD_VARIANCE==0) { 
+                intentionReason = believes.config.PARCEL_REWARD_VARIANCE==0 ? "No reward variance,pick up the nearest parcel" : "Crowded, pick up the nearest parcel"
+                bestParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) => (distance(believes.me, a))- (distance(believes.me, b)))[0]
+            }// if there is no reward decay (and the crowd is not high nor there is some reward variance) i want to pick up the parcel with the highest reward
+            else if(believes.config.PARCEL_DECADING_INTERVAL=="infinite" ){ 
+                intentionReason =  `No reward decay, and not crowded, pick up the parcel with the highest reward`
+                bestParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) =>b.reward-a.reward)[0]
+            }
+            else{  // otherwise (not crowded with reward variance and reward dacay) i want to pick up the parcel with the highest reward when reaching that parcel
+                intentionReason = `Not crowded, pick up the parcel with the highest reward when reaching that parcel`
+                bestParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) => 
+                    (b.reward - distance(believes.me, b)* believes.config.rewardDecayRatio)
+                    - 
+                    (a.reward - distance(believes.me, a)* believes.config.rewardDecayRatio)
+                )[0]
+            }
+
             /**
              * A possible improvement could be to select the parcel
              * which is deliverable
              * By deliverable I mean that the parcel should have enough reward to be worth
              * to be delivered (i.e. it doesnt make sense to go pick up a parcel which will dissapear before reaching the delivery point)
              */
-            Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Pick up parcel from ${nearestParcel.x}, ${nearestParcel.y}`);
+            Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Pick up parcel from ${bestParcel.x}, ${bestParcel.y} | Reason: ${intentionReason}`);
             console.group()
-            return new Pickup({ target: nearestParcel })
+            return new Pickup({ target: bestParcel })
         } else {
             /**
              * Here im thinking that probably using a Map is not a good idea.
@@ -81,7 +116,7 @@ export class Intention{
                     console.group();
                     return new TargetMove({ target: { x: target.x, y: target.y } });
                 }
-            }
+            }            
             return new RandomMove();
         }
         
@@ -117,7 +152,8 @@ export class Intention{
             if (!believes.parcels.some(p=>p.carriedBy==believes.me.id)) //if i'm not carrying any parcel anymore
                 plan.stop = true
         
-            if (believes.parcels.filter(p => p.carriedBy === null && distance(believes.me, p)<hyperParams.radius_distance).length!=0) //if a parcel is near me when i try to deliver i want to pick that parcel
+            if (believes.parcels.filter(p => p.carriedBy === null &&
+                 distance(believes.me, p)<hyperParams.radius_distance).length!=0) //if a parcel is near me when i try to deliver i want to pick that parcel
                 plan.stop = true
             
             await new Promise( res => setImmediate( res ) );
@@ -128,7 +164,7 @@ export class Intention{
         Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO,'Starting to revise target move')
         while ( !plan.stop ) {
             //if i sense some parcel (that is not already carried by anyone), instead of exploring i want to pick that parcel 
-            //(the carried by null condition needed only when no delivery point is aviailable, because the agent keep sensing his packet and stop the target move, but we don't want that)
+            //(the carried by null condition needed only when no delivery point is available, because the agent keep sensing his packet and stop the target move, but we don't want that)
             if (believes.parcels.filter(p => p.carriedBy == null).length>0){ 
                 plan.stop = true
             }

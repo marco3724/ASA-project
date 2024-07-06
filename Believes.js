@@ -59,6 +59,7 @@ export const mapConstant = {
 export const hyperParams = {
   radius_distance: 3,
   min_reward: 15,
+  crowdedThreshold: 1,
   retry:{
     min_retry: 10,
     max_retry: 50,

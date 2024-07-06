@@ -82,14 +82,23 @@ client.onMap((width, height, tiles) => {
         Logger.logEvent(Logger.logType.BELIEVES,Logger.logLevels.INFO,"Graph: "+mapConstant.graph.toString())
 });
 client.onAgentsSensing( (agents) => {
+
+    believes.agentsPosition.forEach((value, key) => {
+        believes.agentsPosition.set(key, {...value, unseen: value.unseen+1});
+    })
+
     agents.forEach(agents =>{
     believes.agentsPosition.has(agents.id) ? 
-        believes.agentsPosition.set(agents.id, {x:agents.x,y:agents.y,score:agents.score})
+        believes.agentsPosition.set(agents.id, {x:agents.x,y:agents.y,score:agents.score,unseen:0})
         : 
-        believes.agentsPosition.set(agents.id, {x:agents.x,y:agents.y,score:agents.score})
+        believes.agentsPosition.set(agents.id, {x:agents.x,y:agents.y,score:agents.score,unseen:0})
     })
-    if(logBelieves)
-        Logger.logEvent(Logger.logType.BELIEVES,Logger.logLevels.INFO,"Agents: "+JSON.stringify(believes.agentsPosition))
+    if(logBelieves){
+        let mapArray = [...believes.agentsPosition.entries()];
+        Logger.logEvent(Logger.logType.BELIEVES,Logger.logLevels.INFO,"Agents: "+JSON.stringify(mapArray))
+    }
+    
+       
 } )
 
 
@@ -153,12 +162,12 @@ client.onParcelsSensing( async ( perceived_parcels ) => {
 
 client.onConfig( (config) => {
     believes.config = config
-    believes.config.rewardDecayRatio = 0
+    believes.config.rewardDecayRatio = 0 // if the reward decay is infinite, the reward will never decrease so i don't want to consider the distance (in case there is not crowd)
     if(believes.config.PARCEL_DECADING_INTERVAL=="infinite")
         //min_reward = 0 TODO
         console.log("a caso")
     else
-        believes.config.rewardDecayRatio = config.MOVEMENT_DURATION/(config.PARCEL_DECADING_INTERVAL.split("s")[0] *1000) //cost of moving one step
+        believes.config.rewardDecayRatio = config.MOVEMENT_DURATION/(config.PARCEL_DECADING_INTERVAL.split("s")[0] *1000) //cost of moving one step (for each step how much the reward decrease ex movDuration 1s and decadingInterval =2, then the reward decrease of 0.5 for each step)
     if(logBelieves)
         Logger.logEvent(Logger.logType.BELIEVES,Logger.logLevels.INFO,"Config: "+JSON.stringify(believes.config))
 })
