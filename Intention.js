@@ -5,6 +5,7 @@ import {RandomMove} from './Plans/RandomMove.js'
 import { TargetMove } from './Plans/TargetMove.js'
 import { distance } from './Utility/utility.js';
 import { Logger } from './Utility/Logger.js';
+import { sendBelief } from './Communication/communication.js';
 export class Intention{
     constructor(){
         this.queue = [] //the idea is that when stopping a plan there are 2 possibility, 1 that we still want to keep that intention, 2 we dont want to for example we change a put down with a pick up, and we dont want to keet the put down because we in picky another parcel we may want to deliver in another place
@@ -77,6 +78,10 @@ export class Intention{
              */
             Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Pick up parcel from ${bestParcel.x}, ${bestParcel.y} | Reason: ${intentionReason}`);
             console.group()
+            // filter the parcels removing the one chose to pick up and the one that are already carried by someone
+            let parcelsToShare = believes.parcels.filter(p => p.id !== bestParcel.id && p.carriedBy === null);
+            sendBelief("parcels", parcelsToShare);
+            console.log("parcelsToShare: ", parcelsToShare);
             return new Pickup({ target: bestParcel })
         } else {
             /**
@@ -114,9 +119,9 @@ export class Intention{
                             break;
                         }
                     }
-                    console.log("cumulativeSum: ", cumulativeSum);
-                    console.log("threshold: ", threshold);
-                    console.log("target: ", target);
+                    // console.log("cumulativeSum: ", cumulativeSum);
+                    // console.log("threshold: ", threshold);
+                    // console.log("target: ", target);
 
                     
 
