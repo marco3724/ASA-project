@@ -81,7 +81,6 @@ export class Intention{
             // filter the parcels removing the one chose to pick up and the one that are already carried by someone
             let parcelsToShare = believes.parcels.filter(p => p.id !== bestParcel.id && p.carriedBy === null);
             sendBelief("parcels", parcelsToShare);
-            console.log("parcelsToShare: ", parcelsToShare);
             return new Pickup({ target: bestParcel })
         } else {
             /**
