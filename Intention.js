@@ -64,7 +64,7 @@ export class Intention{
                         (a.reward - distance(believes.me, a)* believes.config.rewardDecayRatio)
                     )[0]
                 }
-                if(!reasonable) // if im not reasonable, wish me luck
+                if(!reasonable && crowdness > hyperParams.crowdedThreshold  ) // if im not reasonable, wish me luck
                     intentionReason = `Wish me Luck!, ${intentionReason} |${beingPretentious}`
             }
 
