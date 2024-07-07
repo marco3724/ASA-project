@@ -30,9 +30,20 @@ client.onMap((width, height, tiles) => {
          */
         if (tile.parcelSpawner) {
             mapConstant.parcelSpawner.push({x: tile.x, y: tile.y});
-            believes.heatmap.set(`t_${tile.x}_${tile.y}`, {x: tile.x, y: tile.y, currentParcelId: null, prob: 1});
+            // believes.heatmap.set(`t_${tile.x}_${tile.y}`, {x: tile.x, y: tile.y, currentParcelId: null, prob: 1});
         }
     });
+
+    /**
+     * Initially, each parcel spawner has the same probability to spawn a parcel
+     */
+    let numSpawners = mapConstant.parcelSpawner.length;
+    let prob = 1 / numSpawners;
+    mapConstant.parcelSpawner.forEach(spawner => {
+        believes.heatmap.set(`t_${spawner.x}_${spawner.y}`, {x: spawner.x, y: spawner.y, currentParcelId: null, prob: prob});
+    });
+
+
     if(logBelieves)
         Logger.logEvent(Logger.logType.BELIEVES,Logger.logLevels.INFO,"heatmap: "+JSON.stringify([...believes.heatmap.entries()]))
         
@@ -112,23 +123,23 @@ client.onYou( ( {id, name, x, y, score} ) => {
         Logger.logEvent(Logger.logType.BELIEVES,Logger.logLevels.INFO,"Me: "+JSON.stringify(believes.me))
 
     //Update heatmap
-    let maxViewingDistance = believes.config.PARCELS_OBSERVATION_DISTANCE
-    for (let i = 0; i < maxViewingDistance; i++) {
-        for (let j = 0; j < maxViewingDistance; j++) {
-            let x = believes.me.x + i;
-            let y = believes.me.y + j;
-            if (believes.heatmap.has(`t_${x}_${y}`)) {
-                let tileInfo = believes.heatmap.get(`t_${x}_${y}`);
-                // if the probability is not zero and the tile is not a parcel spawner
-                if (tileInfo.prob > 0 && !mapConstant.parcelSpawner.some(spawner => spawner.x == x && spawner.y == y)) {
-                    // if there isn't a parcel on this tile, decrease the probability
-                    if (!believes.parcels.some(p => p.x == x && p.y == y)) {
-                        believes.heatmap.set(`t_${x}_${y}`, {...tileInfo, currentParcelId: null, prob: tileInfo.prob - hyperParams.heatmap_decading});
-                    }
-                }
-            }
-        }
-    }
+    // let maxViewingDistance = believes.config.PARCELS_OBSERVATION_DISTANCE
+    // for (let i = 0; i < maxViewingDistance; i++) {
+    //     for (let j = 0; j < maxViewingDistance; j++) {
+    //         let x = believes.me.x + i;
+    //         let y = believes.me.y + j;
+    //         if (believes.heatmap.has(`t_${x}_${y}`)) {
+    //             let tileInfo = believes.heatmap.get(`t_${x}_${y}`);
+    //             // if the probability is not zero and the tile is not a parcel spawner
+    //             if (tileInfo.prob > 0 && !mapConstant.parcelSpawner.some(spawner => spawner.x == x && spawner.y == y)) {
+    //                 // if there isn't a parcel on this tile, decrease the probability
+    //                 if (!believes.parcels.some(p => p.x == x && p.y == y)) {
+    //                     believes.heatmap.set(`t_${x}_${y}`, {...tileInfo, currentParcelId: null, prob: tileInfo.prob - hyperParams.heatmap_decading});
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 } )
 
 
@@ -151,11 +162,22 @@ client.onParcelsSensing( async ( perceived_parcels ) => {
                  * this is done to avoid increasing the probability of the same parcel
                  */
                 if (tileInfo.currentParcelId == null || tileInfo.currentParcelId !== parcel.id) {
-                    believes.heatmap.set(parcelPosition, {...tileInfo, currentParcelId: parcel.id, prob: tileInfo.prob + 1})
+                    believes.heatmap.set(parcelPosition, {...tileInfo, currentParcelId: parcel.id, prob: tileInfo.prob * 1.05})
                 }
             }
         }
     });
+
+    // calculate the sum of the probabilities of the parcel spawners
+    let sum = 0;
+    believes.heatmap.forEach((value, key) => {
+        sum += value.prob;
+    });
+    // update each prob such that currprob = currprob/sum
+    believes.heatmap.forEach((value, key) => {
+        believes.heatmap.set(key, {...value, prob: value.prob / sum});
+    });
+
     if(logBelieves)
         Logger.logEvent(Logger.logType.BELIEVES,Logger.logLevels.INFO,"Heatmap: "+JSON.stringify([...believes.heatmap.entries()]))
 });
