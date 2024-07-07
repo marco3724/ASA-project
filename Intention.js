@@ -9,6 +9,7 @@ export class Intention{
     constructor(){
         this.queue = [] //the idea is that when stopping a plan there are 2 possibility, 1 that we still want to keep that intention, 2 we dont want to for example we change a put down with a pick up, and we dont want to keet the put down because we in picky another parcel we may want to deliver in another place
     }
+
     generateAndFilterOptions(){
         console.groupEnd()
         Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.INFO, `Parcels: ${JSON.stringify(believes.parcels)}`);
@@ -87,6 +88,7 @@ export class Intention{
              */
             if (believes.heatmap.size > 0) {
                 let prob = Math.floor(Math.random() * 100);
+                // We leave a 5% chance to explore randomly
                 if (prob <= 5) {
                     Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Exploring randomly`);
                     let keys = Array.from(believes.heatmap.keys());
@@ -94,39 +96,65 @@ export class Intention{
                     let target = believes.heatmap.get(randomKey);
                     return new TargetMove({ target: { x: target.x, y: target.y } });
                 } else {
-                    let sortMap = [...believes.heatmap.entries()].sort((a, b) => b[1].prob - a[1].prob);
-                    let maxDiff = sortMap[0][1].prob - sortMap[sortMap.length - 1][1].prob;
-                    let possibleTargets = []
+
+                    // Cumulative probability
+                    const cumulativeSum = Array.from(believes.heatmap.values()).reduce((acc, obj) => {
+                        const newSum = acc.sum + obj.prob;
+                        acc.cumulativeArray.push(newSum);
+                        acc.sum = newSum;
+                        return acc;
+                    }, { sum: 0, cumulativeArray: [] }).cumulativeArray;
+                    // Generate a random number
+                    let threshold = Math.random();
+                    let target = null;
+                    // Find the target, which has the probability higher than the threshold
+                    for (let i = 0; i < cumulativeSum.length; i++) {
+                        if (cumulativeSum[i] >= threshold) {
+                            target = Array.from(believes.heatmap.values())[i];
+                            break;
+                        }
+                    }
+                    console.log("cumulativeSum: ", cumulativeSum);
+                    console.log("threshold: ", threshold);
+                    console.log("target: ", target);
+
+                    
+
+
+
+                    // let sortMap = [...believes.heatmap.entries()].sort((a, b) => b[1].prob - a[1].prob);
+                    // let maxDiff = sortMap[0][1].prob - sortMap[sortMap.length - 1][1].prob;
+                    // let possibleTargets = []
                     /**
                      * if the difference between the highest and the lowest probability is less than the threshold
                      * then just take the 5 farthest tiles from me, and select one of them randomly
                      *  */ 
-                    if (maxDiff < hyperParams.highDensityThreshold) {
-                        sortMap = sortMap.sort((a, b) => distance(believes.me, {x: b[1].x, y: b[1].y}) - distance(believes.me, {x: a[1].x, y: a[1].y}));
-                        sortMap.slice(0, 5).forEach((value) => {
-                            possibleTargets.push(value[1]);
-                        });
-                    } else {
-                        let sortedHeatmap = new Map(sortMap);
-                        Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.INFO, `Sorted heatmap: ${JSON.stringify([...sortedHeatmap.entries()].slice(0, 5))}`);
-                        const it = sortedHeatmap.values();
-                        let val = it.next();
-                        let maxCounter = val.value.prob;
-                        let excededThreshold = false;
-                        while (!val.done) {
-                            if (val.value.prob >= (maxCounter - hyperParams.counterThreshold)) {
-                                possibleTargets.push(val.value);
-                            } else {
-                                excededThreshold = true;
-                            }
-                            val = it.next();
-                        }
-                    }
+                    // if (maxDiff < hyperParams.highDensityThreshold) {
+                    //     sortMap = sortMap.sort((a, b) => distance(believes.me, {x: b[1].x, y: b[1].y}) - distance(believes.me, {x: a[1].x, y: a[1].y}));
+                    //     sortMap.slice(0, 5).forEach((value) => {
+                    //         possibleTargets.push(value[1]);
+                    //     });
+                    // } else {
+                    //     let sortedHeatmap = new Map(sortMap);
+                    //     Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.INFO, `Sorted heatmap: ${JSON.stringify([...sortedHeatmap.entries()].slice(0, 5))}`);
+                    //     const it = sortedHeatmap.values();
+                    //     let val = it.next();
+                    //     let maxCounter = val.value.prob;
+                    //     let excededThreshold = false;
+                    //     while (!val.done) {
+                    //         if (val.value.prob >= (maxCounter - hyperParams.counterThreshold)) {
+                    //             possibleTargets.push(val.value);
+                    //         } else {
+                    //             excededThreshold = true;
+                    //         }
+                    //         val = it.next();
+                    //     }
+                    // }
                     
-                    let random = Math.floor(Math.random() * possibleTargets.length);
-                    let target = possibleTargets[random];
-                    Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Exploring to ${target.x}, ${target.y}`);
-                    console.group();
+                    //let random = Math.floor(Math.random() * possibleTargets.length);
+                    //let target = possibleTargets[random];
+                    //Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Exploring to ${target.x}, ${target.y}`);
+                    //console.group();
                     return new TargetMove({ target: { x: target.x, y: target.y } });
                 }
             }        
@@ -134,6 +162,7 @@ export class Intention{
             return new RandomMove();
         }
     }
+
     async revise(plan){
         if(plan instanceof Pickup)
             this.revisePickUp(plan)
@@ -172,6 +201,7 @@ export class Intention{
             await new Promise( res => setImmediate( res ) );
         }
     }
+
     async reviseTargetMove(plan){
         const {intention} = plan
         Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO,'Starting to revise target move')
