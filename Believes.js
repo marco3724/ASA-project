@@ -59,15 +59,16 @@ export const mapConstant = {
 export const hyperParams = {
   radius_distance: 3,
   min_reward: 15,
-  crowdedThreshold: 1,
+  crowdedThreshold: -1,
   retry:{
-    min_retry: 10,
-    max_retry: 50,
+    min_retry: 5,
+    max_retry: 10,
   },
   blackList: {
     max_timeout: 30000,
     min_timeout: 10000,
   },
+  reasonable: 0.9,
   heatmap_decading: 1, // this param is used to decrease the probability of a cell in the heatmap
   counterThreshold: 3,
   highDensityThreshold: 2,

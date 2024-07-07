@@ -37,23 +37,36 @@ export class Intention{
             })
             console.log(crowdness)
             let intentionReason = ""
-            //if very crowded or there is no reward variance, i want to pick up the parcel with that is the nearest (need to be less pretentious)
-            if (crowdness > hyperParams.crowdedThreshold || believes.config.PARCEL_REWARD_VARIANCE==0) { 
-                intentionReason = believes.config.PARCEL_REWARD_VARIANCE==0 ? "No reward variance,pick up the nearest parcel" : "Crowded, pick up the nearest parcel"
+            //if very crowded, i want to pick up the parcel with that is the nearest (need to be less pretentious)
+            //but there is alway a probability that even if crwoded, i want to pick up the parcel with the highest reward
+            let beingPretentious = Math.random()  //but there is alway a small probability that even if crowded, i want to pick up the parcel with the highest reward
+            let reasonable = beingPretentious<hyperParams.reasonable//if i'm not enough pretentious i stay reasonable
+            if (crowdness > hyperParams.crowdedThreshold && reasonable ) { 
+                intentionReason =  "Crowded, pick up the nearest parcel"
                 bestParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) => (distance(believes.me, a))- (distance(believes.me, b)))[0]
-            }// if there is no reward decay (and the crowd is not high nor there is some reward variance) i want to pick up the parcel with the highest reward
-            else if(believes.config.PARCEL_DECADING_INTERVAL=="infinite" ){ 
-                intentionReason =  `No reward decay, and not crowded, pick up the parcel with the highest reward`
-                bestParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) =>b.reward-a.reward)[0]
             }
-            else{  // otherwise (not crowded with reward variance and reward dacay) i want to pick up the parcel with the highest reward when reaching that parcel
-                intentionReason = `Not crowded, pick up the parcel with the highest reward when reaching that parcel`
-                bestParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) => 
-                    (b.reward - distance(believes.me, b)* believes.config.rewardDecayRatio)
-                    - 
-                    (a.reward - distance(believes.me, a)* believes.config.rewardDecayRatio)
-                )[0]
+            else{
+                // if there is no reward decay and no variance, i want to pick up the parcel that is the nearest
+                if(believes.config.PARCEL_DECADING_INTERVAL=="infinite" && believes.config.PARCEL_REWARD_VARIANCE==0 ){
+                    intentionReason =  `No reward decay and no variance, pick up the parcel that is the nearest parcel`
+                    bestParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) => (distance(believes.me, a))- (distance(believes.me, b)))[0]
+                }
+                else if(believes.config.PARCEL_DECADING_INTERVAL=="infinite" ){  //in there is no reward decay, i want to pick up the parcel with the highest reward without considering the distance
+                    intentionReason =  `No reward decay, pick up the parcel with the highest reward`
+                    bestParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) =>b.reward-a.reward)[0]
+                }
+                else{  // otherwise (not crowded with reward decay) i want to pick up the parcel with the highest reward when reaching that parcel
+                    intentionReason = `pick up the parcel with the highest reward when reaching that parcel`
+                    bestParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) => 
+                        (b.reward - distance(believes.me, b)* believes.config.rewardDecayRatio)
+                        - 
+                        (a.reward - distance(believes.me, a)* believes.config.rewardDecayRatio)
+                    )[0]
+                }
+                if(!reasonable) // if im not reasonable, wish me luck
+                    intentionReason = `Wish me Luck!, ${intentionReason} |${beingPretentious}`
             }
+
 
             /**
              * A possible improvement could be to select the parcel
@@ -89,7 +102,7 @@ export class Intention{
                      * then just take the 5 farthest tiles from me, and select one of them randomly
                      *  */ 
                     if (maxDiff < hyperParams.highDensityThreshold) {
-                        sortMap = sortMap.sort((a, b) => distance(believes.me, {x: a[1].x, y: a[1].y}) - distance(believes.me, {x: b[1].x, y: b[1].y}));
+                        sortMap = sortMap.sort((a, b) => distance(believes.me, {x: b[1].x, y: b[1].y}) - distance(believes.me, {x: a[1].x, y: a[1].y}));
                         sortMap.slice(0, 5).forEach((value) => {
                             possibleTargets.push(value[1]);
                         });
@@ -116,10 +129,10 @@ export class Intention{
                     console.group();
                     return new TargetMove({ target: { x: target.x, y: target.y } });
                 }
-            }            
+            }        
+            console.log("NON VA BENE")
             return new RandomMove();
         }
-        
     }
     async revise(plan){
         if(plan instanceof Pickup)
@@ -131,7 +144,7 @@ export class Intention{
     }
     
     async revisePickUp(plan){
-        const {intention} = plan
+        const {intention} = plan      
         Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO,'Starting to revise pick up')
         while ( !plan.stop ) {
             //if i can't sense the parcel and that parcel is within my view, it mean that is gone or someone took it, so stop, but if it is outside of my view the parcel may still be there
@@ -142,7 +155,7 @@ export class Intention{
             // if(believes.parcels.filter(p => p.carriedBy === null && p.id!== intention.target.id && distance(believes.me, p)<distance(believes.me,intention.target)).length>0) //if a parcel is nearer than the one i'm trying to pick up, i want to pick that parcel
             //     plan.stop = true
              await new Promise( res => setImmediate( res ) );
-        }  
+        }
     }
 
     async revisePutDown(plan){
