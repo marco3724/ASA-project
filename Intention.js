@@ -3,7 +3,7 @@ import { Pickup } from './Plans/Pickup.js';
 import { Putdown } from './Plans/Putdown.js';
 import {RandomMove} from './Plans/RandomMove.js'
 import { TargetMove } from './Plans/TargetMove.js'
-import { distance } from './Utility/utility.js';
+import { distance,astarDistance } from './Utility/utility.js';
 import { Logger } from './Utility/Logger.js';
 export class Intention{
     constructor(){
@@ -14,10 +14,10 @@ export class Intention{
         console.groupEnd()
         Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.INFO, `Parcels: ${JSON.stringify(believes.parcels)}`);
         if (believes.parcels.some(p => p.carriedBy === believes.me.id) // if i have some package i may want to deliver
-            && believes.parcels.filter(p => p.carriedBy === null && distance(believes.me, p)<hyperParams.radius_distance).length==0 //if there are no package near me i deliver, otherwise i pick up
+            && believes.parcels.filter(p => p.carriedBy === null && astarDistance(believes.me, p,mapConstant.graph)<hyperParams.radius_distance).length==0 //if there are no package near me i deliver, otherwise i pick up
             && believes.deliveryPoints.length > 0 //if there are no non blocked delivery points, i won't deliver for now, i could also reinstate the blocked delivery points, but if the reinstated delivery point is blocked again i would have a loop and basically do nothing ( so we need to wait the blacklist of the delivery points), so if there are no delivery point avbailable is better to pick other packet
         ) { 
-            let nearestDelivery = believes.deliveryPoints.sort((a, b) => distance(believes.me, a) - distance(believes.me, b))[0]
+            let nearestDelivery = believes.deliveryPoints.sort((a, b) => astarDistance(believes.me, a,mapConstant.graph) - astarDistance(believes.me, b,mapConstant.graph))[0]
             Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Deliver parcel to ${nearestDelivery.x}, ${nearestDelivery.y}`);
             console.group()
             return new Putdown({ target: nearestDelivery });
@@ -44,13 +44,13 @@ export class Intention{
             let reasonable = beingPretentious<hyperParams.reasonable//if i'm not enough pretentious i stay reasonable
             if (crowdness > hyperParams.crowdedThreshold && reasonable ) { 
                 intentionReason =  "Crowded, pick up the nearest parcel"
-                bestParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) => (distance(believes.me, a))- (distance(believes.me, b)))[0]
+                bestParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) => (astarDistance(believes.me, a,mapConstant.graph))- (astarDistance(believes.me, b,mapConstant.graph)))[0]
             }
             else{
                 // if there is no reward decay and no variance, i want to pick up the parcel that is the nearest
                 if(believes.config.PARCEL_DECADING_INTERVAL=="infinite" && believes.config.PARCEL_REWARD_VARIANCE==0 ){
                     intentionReason =  `No reward decay and no variance, pick up the parcel that is the nearest parcel`
-                    bestParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) => (distance(believes.me, a))- (distance(believes.me, b)))[0]
+                    bestParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) => (astarDistance(believes.me, a,mapConstant.graph))- (astarDistance(believes.me, b,mapConstant.graph)))[0]
                 }
                 else if(believes.config.PARCEL_DECADING_INTERVAL=="infinite" ){  //in there is no reward decay, i want to pick up the parcel with the highest reward without considering the distance
                     intentionReason =  `No reward decay, pick up the parcel with the highest reward`
@@ -59,9 +59,9 @@ export class Intention{
                 else{  // otherwise (not crowded with reward decay) i want to pick up the parcel with the highest reward when reaching that parcel
                     intentionReason = `pick up the parcel with the highest reward when reaching that parcel`
                     bestParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) => 
-                        (b.reward - distance(believes.me, b)* believes.config.rewardDecayRatio)
+                        (b.reward - astarDistance(believes.me, b,mapConstant.graph)* believes.config.rewardDecayRatio)
                         - 
-                        (a.reward - distance(believes.me, a)* believes.config.rewardDecayRatio)
+                        (a.reward - astarDistance(believes.me, a,mapConstant.graph)* believes.config.rewardDecayRatio)
                     )[0]
                 }
                 if(!reasonable && crowdness > hyperParams.crowdedThreshold  ) // if im not reasonable, wish me luck
@@ -114,9 +114,9 @@ export class Intention{
                             break;
                         }
                     }
-                    console.log("cumulativeSum: ", cumulativeSum);
-                    console.log("threshold: ", threshold);
-                    console.log("target: ", target);
+                    // console.log("cumulativeSum: ", cumulativeSum);
+                    // console.log("threshold: ", threshold);
+                    // console.log("target: ", target);
 
                     
 
@@ -178,7 +178,7 @@ export class Intention{
         while ( !plan.stop ) {
             //if i can't sense the parcel and that parcel is within my view, it mean that is gone or someone took it, so stop, but if it is outside of my view the parcel may still be there
             if (!believes.parcels.some(p=>(p.id==intention.target.id)) && 
-            distance(intention.target,believes.me)<believes.config.PARCELS_OBSERVATION_DISTANCE-1){ //this solve the problem of the parcel that is outside of the view once i have the intention to pick it
+            astarDistance(intention.target,believes.me,mapConstant.graph)<believes.config.PARCELS_OBSERVATION_DISTANCE-1){ //this solve the problem of the parcel that is outside of the view once i have the intention to pick it
                 plan.stop = true
             }
             // if(believes.parcels.filter(p => p.carriedBy === null && p.id!== intention.target.id && distance(believes.me, p)<distance(believes.me,intention.target)).length>0) //if a parcel is nearer than the one i'm trying to pick up, i want to pick that parcel
@@ -195,7 +195,7 @@ export class Intention{
                 plan.stop = true
         
             if (believes.parcels.filter(p => p.carriedBy === null &&
-                 distance(believes.me, p)<hyperParams.radius_distance).length!=0) //if a parcel is near me when i try to deliver i want to pick that parcel
+                 astarDistance(believes.me, p,mapConstant.graph)<hyperParams.radius_distance).length!=0 ) //if a parcel is near me when i try to deliver i want to pick that parcel
                 plan.stop = true
             
             await new Promise( res => setImmediate( res ) );

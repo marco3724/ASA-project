@@ -1,4 +1,5 @@
 import fs from 'fs';
+import * as astar from "./astar.js";
 export function nearestDelivery(){
     let min = Number.MAX_VALUE
     let target;
@@ -31,4 +32,10 @@ export function readFile ( path ) {
 export function removeArbitraryStringPatterns(text, arbitraryString) {
     const regex = new RegExp(`\\([^()]*${arbitraryString}[^()]*\\)`, 'g');//match the pattern (.....arbitrarystring....)
     return text.replace(regex, '');//remove
+}
+export function astarDistance(start, end, graph){
+    let startNode = graph.grid[start.x][start.y]
+    let endNode = graph.grid[end.x][end.y]
+    let result = astar.astar.search(graph, startNode, endNode)
+    return result.length
 }
