@@ -162,6 +162,7 @@ client.onParcelsSensing( async ( perceived_parcels ) => {
 
 client.onConfig( (config) => {
     believes.config = config
+    believes.config.PARCEL_REWARD_VARIANCE = parseInt(config.PARCEL_REWARD_VARIANCE) //sometimes is a string
     believes.config.rewardDecayRatio = 0 // if the reward decay is infinite, the reward will never decrease so i don't want to consider the distance (in case there is not crowd)
     if(believes.config.PARCEL_DECADING_INTERVAL=="infinite")
         //min_reward = 0 TODO
