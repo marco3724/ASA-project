@@ -1,5 +1,6 @@
 import { DeliverooApi } from "@unitn-asa/deliveroo-js-client";
 import { Logger } from "../Utility/Logger.js";
+import { believes } from "../Believes.js";
 
 let client = null;
 let otherAgent = {
@@ -31,6 +32,26 @@ function handleMessage(id, name, msg, reply) {
         otherAgent.intention = msg.content;
     }
 
+    if (msg.type === "belief") {
+        Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Received belief from ${name}`);
+        // if we receive a belief about parcels, we update our believes
+        if (msg.content.type === "parcels") {
+            // for each incoming parcel, we check if it is already in our believes
+            msg.content.parcels.forEach(p => {
+                let found = false;
+                believes.parcels.forEach(bp => {
+                    if (bp.id === p.id) {
+                        found = true;
+                    }
+                });
+                // if not, we add it
+                if (!found) {
+                    believes.parcels.push(p);
+                }
+            });
+        }
+    }
+
 }
 
 function initCommunication(deliverooClient) {
@@ -56,11 +77,31 @@ function initCommunication(deliverooClient) {
  * @param {Object} pos the target position of the intention
  */
 async function sendIntention(t, pos) {
-    client.say(otherAgent.id, {
-        type: "intention",
+    // console.log(client);
+    if (client) {
+        await client.say(otherAgent.id, {
+            type: "intention",
+            content: {
+                type: t,
+                position: pos
+            }
+        });
+    }
+    return;
+}
+
+/**
+ * Function to send a belief to another agent
+ * @param {String} t the type of belief (e.g. "parcels", other)
+ * @param {Array} p the parcels to be shared
+ */
+async function sendBelief(t, p) {
+    Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Sending belief to ${otherAgent.id}`);
+    await client.say(otherAgent.id, {
+        type: "belief",
         content: {
             type: t,
-            position: pos
+            parcels: p
         }
     });
 }
@@ -69,4 +110,5 @@ export {
     initCommunication,
     otherAgent,
     sendIntention,
+    sendBelief,
 };
