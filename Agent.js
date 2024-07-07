@@ -176,6 +176,7 @@ client.onConfig( (config) => {
 async function agentLoop(){
     let intention = new Intention()
     Plan.domain = await readFile('./domain.pddl' );
+    await new Promise((resolve) => setTimeout(resolve, 100));
     while(true){
         let plan = intention.generateAndFilterOptions()
         await plan.generatePlan()
