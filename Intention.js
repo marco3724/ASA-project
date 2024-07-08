@@ -36,7 +36,7 @@ export class Intention{
             Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Deliver parcel to ${nearestDelivery.x}, ${nearestDelivery.y}`);
             console.group()
             return new Putdown({ target: nearestDelivery });
-        } else if (believes.parcels.filter(p => p.carriedBy === null && p.carriedBy != believes.me.id && !this.isFriendlyFire(p)).length !== 0) { // if there are parcels which are not carried by anyone
+        } else if (believes.parcels.filter(p => p.carriedBy === null && p.carriedBy != believes.me.id && !this.isFriendlyFire(p)).length !== 0) { // if there are parcels which are not carried by anyone and that are not the intention of the other agent
             let crowdness = 0
             let bestParcel = []
             //calculate the crowdness
