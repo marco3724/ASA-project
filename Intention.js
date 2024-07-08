@@ -17,7 +17,7 @@ export class Intention{
      */
     isFriendlyFire(parcel) {
         if (otherAgent.intention.type === "pickup") {
-            if (parcel.x === otherAgent.intention.position.x && parcel.y === otherAgent.intention.position.y) {
+            if (parcel.id == otherAgent.intention.target.id) {
                 return true;
             }
         } else {
