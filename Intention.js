@@ -5,10 +5,24 @@ import {RandomMove} from './Plans/RandomMove.js'
 import { TargetMove } from './Plans/TargetMove.js'
 import { distance } from './Utility/utility.js';
 import { Logger } from './Utility/Logger.js';
-import { sendBelief } from './Communication/communication.js';
+import { sendBelief, otherAgent } from './Communication/communication.js';
 export class Intention{
     constructor(){
         this.queue = [] //the idea is that when stopping a plan there are 2 possibility, 1 that we still want to keep that intention, 2 we dont want to for example we change a put down with a pick up, and we dont want to keet the put down because we in picky another parcel we may want to deliver in another place
+    }
+
+    /**
+     * Function used to check whether the current parcel is the intention of the other agent
+     * @param {*} parcel 
+     */
+    isFriendlyFire(parcel) {
+        if (otherAgent.intention.type === "pickup") {
+            if (parcel.x === otherAgent.intention.position.x && parcel.y === otherAgent.intention.position.y) {
+                return true;
+            }
+        } else {
+            return false;
+        }
     }
 
     generateAndFilterOptions(){
@@ -22,7 +36,7 @@ export class Intention{
             Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Deliver parcel to ${nearestDelivery.x}, ${nearestDelivery.y}`);
             console.group()
             return new Putdown({ target: nearestDelivery });
-        } else if (believes.parcels.filter(p => p.carriedBy === null && p.carriedBy != believes.me.id).length !== 0) { // if there are parcels which are not carried by anyone
+        } else if (believes.parcels.filter(p => p.carriedBy === null && p.carriedBy != believes.me.id && !isFriendlyFire(p)).length !== 0) { // if there are parcels which are not carried by anyone
             let crowdness = 0
             let bestParcel = []
             //calculate the crowdness
