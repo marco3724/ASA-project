@@ -28,8 +28,8 @@ function handleMessage(id, name, msg, reply) {
     }
 
     if (msg.type === "intention") {
-        Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Received intention from ${name}`);
         otherAgent.intention = msg.content;
+        Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Received intention | ${name} wants to ${otherAgent.intention.type} at ${otherAgent.intention.position.x}, ${otherAgent.intention.position.y}`);
     }
 
     if (msg.type === "belief") {
@@ -77,7 +77,7 @@ function initCommunication(deliverooClient) {
  * @param {Object} pos the target position of the intention
  */
 async function sendIntention(t, pos) {
-    // console.log(client);
+    Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Sending intention to ${otherAgent.id}`);
     if (client) {
         await client.say(otherAgent.id, {
             type: "intention",
