@@ -7,13 +7,21 @@ import { distance,astarDistance } from './Utility/utility.js';
 import { Logger } from './Utility/Logger.js';
 export class Intention{
     constructor(){
-        this.queue = [] //the idea is that when stopping a plan there are 2 possibility, 1 that we still want to keep that intention, 2 we dont want to for example we change a put down with a pick up, and we dont want to keet the put down because we in picky another parcel we may want to deliver in another place
+        this.queue = [] //for sub intention
     }
 
     generateAndFilterOptions(){
         console.groupEnd()
         Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.INFO, `Parcels: ${JSON.stringify(believes.parcels)}`);
-        if (believes.parcels.some(p => p.carriedBy === believes.me.id) // if i have some package i may want to deliver
+        if (this.queue.length > 0) {
+            Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Executing from queue`);
+            console.group()
+            let intention = this.queue.shift()
+            if (this.queue.length==0) //restart the original intention
+                intention.stop = false
+            return intention; //return and remove the first intention in the queue
+        }
+        else if (believes.parcels.some(p => p.carriedBy === believes.me.id) // if i have some package i may want to deliver
             && believes.parcels.filter(p => p.carriedBy === null && astarDistance(believes.me, p,mapConstant.graph)<hyperParams.radius_distance).length==0 //if there are no package near me i deliver, otherwise i pick up
             && believes.deliveryPoints.length > 0 //if there are no non blocked delivery points, i won't deliver for now, i could also reinstate the blocked delivery points, but if the reinstated delivery point is blocked again i would have a loop and basically do nothing ( so we need to wait the blacklist of the delivery points), so if there are no delivery point avbailable is better to pick other packet
         ) { 
@@ -29,9 +37,7 @@ export class Intention{
                 //hyperParams.radius_distance*believes.config.MOVEMENT_DURATION
                 // the unseen paramter is updated for every step, 
                 console.log(agent)
-                // so we want to check the agent that has moved for radius distance, we need to multiply the radius distance with the movement duration (???)
-                // radius distance = unseen/ movement duration value.unseen<hyperParams.radius_distance*believes.config.MOVEMENT_DURATION 
-                // adding this  && distance(believes.me, agent) < hyperParams.radius_distance woul be less crwoded, we need to test TODO
+                // so we want to check the currently seen agent and the angent that we havent seen not to long ago (they may still be nearby)
                 if (agent.unseen<hyperParams.radius_distance) {
                     crowdness += 1
                 }
@@ -94,6 +100,8 @@ export class Intention{
                     let keys = Array.from(believes.heatmap.keys());
                     let randomKey = keys[Math.floor(Math.random() * keys.length)];
                     let target = believes.heatmap.get(randomKey);
+                    Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Exploring to ${target.x}, ${target.y}`);
+                    console.group();
                     return new TargetMove({ target: { x: target.x, y: target.y } });
                 } else {
 
@@ -153,8 +161,8 @@ export class Intention{
                     
                     //let random = Math.floor(Math.random() * possibleTargets.length);
                     //let target = possibleTargets[random];
-                    //Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Exploring to ${target.x}, ${target.y}`);
-                    //console.group();
+                    Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Exploring to ${target.x}, ${target.y}`);
+                    console.group();
                     return new TargetMove({ target: { x: target.x, y: target.y } });
                 }
             }        
@@ -173,7 +181,7 @@ export class Intention{
     }
     
     async revisePickUp(plan){
-        const {intention} = plan      
+        const {intention} = plan     
         Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO,'Starting to revise pick up')
         while ( !plan.stop ) {
             //if i can't sense the parcel and that parcel is within my view, it mean that is gone or someone took it, so stop, but if it is outside of my view the parcel may still be there
@@ -181,8 +189,20 @@ export class Intention{
             astarDistance(intention.target,believes.me,mapConstant.graph)<believes.config.PARCELS_OBSERVATION_DISTANCE-1){ //this solve the problem of the parcel that is outside of the view once i have the intention to pick it
                 plan.stop = true
             }
-            // if(believes.parcels.filter(p => p.carriedBy === null && p.id!== intention.target.id && distance(believes.me, p)<distance(believes.me,intention.target)).length>0) //if a parcel is nearer than the one i'm trying to pick up, i want to pick that parcel
-            //     plan.stop = true
+
+            //filter the parcel that are one block away from me and that are not the parcel that i'm trying to pick up and my plan (the packet that im trying to pick) is still far away (2 is one block away and pick up)
+
+            let parcelsOnTheWay = believes.parcels.filter(p => p.carriedBy === null && p.id!== intention.target.id && astarDistance(believes.me, p,mapConstant.graph)<2 && plan.plan.length-plan.index>2)
+            parcelsOnTheWay = parcelsOnTheWay.filter(p1=>!this.queue.some(p=>p.intention.target.id===p1.intention.targetid)) //if the parcel is already in the queue 
+            if(parcelsOnTheWay.length>0 ){ //if there are parcerls very near during my path i also want to pick them up
+                plan.stop = true
+                if(this.queue.length==0){//since i still want to achieve this, but after picking up the parcel that is on the way
+                    this.queue.push(plan)
+                } 
+                    
+                this.queue.unshift(new Pickup({target: parcelsOnTheWay[0]}))
+            }
+
              await new Promise( res => setImmediate( res ) );
         }
     }
@@ -195,7 +215,7 @@ export class Intention{
                 plan.stop = true
         
             if (believes.parcels.filter(p => p.carriedBy === null &&
-                 astarDistance(believes.me, p,mapConstant.graph)<hyperParams.radius_distance).length!=0 ) //if a parcel is near me when i try to deliver i want to pick that parcel
+                 astarDistance(believes.me, p,mapConstant.graph)<hyperParams.radius_distance).length!=0 ) //if a parcel is near me when i try to deliver i want to pick that parcel 
                 plan.stop = true
             
             await new Promise( res => setImmediate( res ) );
