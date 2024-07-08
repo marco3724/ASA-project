@@ -204,12 +204,12 @@ async function agentLoop(){
     Plan.domain = await readFile('./domain.pddl' );
     await new Promise((resolve) => setTimeout(resolve, 100));
     while(true){
-        let plan = intention.generateAndFilterOptions()
+        let plan = intention.generateAndFilterOptions();
         // send the intention to the other agent
-        // await sendIntention(plan.type, plan.target);
-        await plan.generatePlan()
-        intention.revise(plan)
-        await plan.execute()   
+        await sendIntention(plan.type, plan.target);
+        await plan.generatePlan();
+        intention.revise(plan);
+        await plan.execute();
     }
 }
 
