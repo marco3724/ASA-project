@@ -29,7 +29,7 @@ function handleMessage(id, name, msg, reply) {
 
     if (msg.type === "intention") {
         otherAgent.intention = msg.content;
-        Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Received intention | ${name} wants to ${otherAgent.intention.type} at ${otherAgent.intention.position.x}, ${otherAgent.intention.position.y}`);
+        Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Received intention | ${name} wants to ${otherAgent.intention.type} at ${otherAgent.intention.target.x}, ${otherAgent.intention.target.y}`);
     }
 
     if (msg.type === "belief") {
