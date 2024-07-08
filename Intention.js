@@ -203,6 +203,20 @@ export class Intention{
                 this.queue.unshift(new Pickup({target: parcelsOnTheWay[0]}))
             }
 
+            let deliveryOnPath = believes.deliveryPoints.filter(p => astarDistance(believes.me, p,mapConstant.graph)<2)
+            let carryingSomeParcel = believes.parcels.filter(p => p.carriedBy === believes.me.id)
+            //if i'm carrying some parcel and there is a delivery point on my path, i want to deliver those parcels first
+            if(deliveryOnPath.length>0 && carryingSomeParcel.length>0){ 
+                plan.stop = true
+                if(this.queue.length==0){//since i still want to achieve this, but af
+                    this.queue.push(plan)
+                } 
+                console.log("DELIVERY ON PATH")
+                let nearestDeliveryPoint = deliveryOnPath.sort((a, b) => astarDistance(believes.me, a,mapConstant.graph) - astarDistance(believes.me, b,mapConstant.graph))[0]
+                this.queue.unshift(new Putdown({target: nearestDeliveryPoint}))
+
+            }
+
              await new Promise( res => setImmediate( res ) );
         }
     }
