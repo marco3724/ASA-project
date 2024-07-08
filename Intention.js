@@ -193,7 +193,8 @@ export class Intention{
             //filter the parcel that are one block away from me and that are not the parcel that i'm trying to pick up and my plan (the packet that im trying to pick) is still far away (2 is one block away and pick up)
 
             let parcelsOnTheWay = believes.parcels.filter(p => p.carriedBy === null && p.id!== intention.target.id && astarDistance(believes.me, p,mapConstant.graph)<2 && plan.plan.length-plan.index>2)
-            parcelsOnTheWay = parcelsOnTheWay.filter(p1=>!this.queue.some(p=>p.intention.target.id===p1.intention.targetid)) //if the parcel is already in the queue 
+            
+            parcelsOnTheWay = parcelsOnTheWay.filter(p1=>!this.queue.some(p=>p.intention.target.id===p1.id)) //if the parcel is already in the queue 
             if(parcelsOnTheWay.length>0 ){ //if there are parcerls very near during my path i also want to pick them up
                 plan.stop = true
                 if(this.queue.length==0){//since i still want to achieve this, but after picking up the parcel that is on the way
@@ -229,7 +230,8 @@ export class Intention{
                 plan.stop = true
         
             if (believes.parcels.filter(p => p.carriedBy === null &&
-                 astarDistance(believes.me, p,mapConstant.graph)<hyperParams.radius_distance).length!=0 ) //if a parcel is near me when i try to deliver i want to pick that parcel 
+                 astarDistance(believes.me, p,mapConstant.graph)<hyperParams.radius_distance).length!=0 && 
+                 plan.plan.length-plan.index>hyperParams.radius_distance) //if a parcel is near me when i try to deliver i want to pick that parcel 
                 plan.stop = true
             
             await new Promise( res => setImmediate( res ) );
