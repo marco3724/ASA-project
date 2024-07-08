@@ -7,7 +7,7 @@ let otherAgent = {
     id: "",
     intention: {
         type: "",
-        position: {x: -1, y: -1}
+        target: {}
     }
 };
 
@@ -74,16 +74,16 @@ function initCommunication(deliverooClient) {
 /**
  * Function to send an intention to another agent
  * @param {String} t the type of intention (e.g. "pickup", "deliver")
- * @param {Object} pos the target position of the intention
+ * @param {Object} tg the target of the intention
  */
-async function sendIntention(t, pos) {
+async function sendIntention(t, tg) {
     Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Sending intention to ${otherAgent.id}`);
     if (client) {
         await client.say(otherAgent.id, {
             type: "intention",
             content: {
                 type: t,
-                position: pos
+                target: tg
             }
         });
     }
