@@ -3,6 +3,12 @@ import { Logger } from "../Utility/Logger.js";
 import { believes } from "../Believes.js";
 
 let client = null;
+let agentType = {
+    LEADING: 0,
+    COMPLIANT:  1
+}
+let agentRole = agentType.LEADING;
+
 let otherAgent = {
     id: "",
     intention: {
@@ -12,20 +18,25 @@ let otherAgent = {
 };
 
 function handleMessage(id, name, msg, reply) {
-    if (msg.type === "handshake") {
-        Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Received handshake from ${name}`);
+    if (msg.type === "handshake" && msg.content === "Hello Baozi C") {
         otherAgent.id = id;
+        agentRole = agentType.COMPLIANT;
+        Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Received handshake from ${name} | setted role as ${agentRole ? "COMPLIANT" : "LEADING"}`);
         client.say(otherAgent.id, {
             type: "ack",
             senderId: client.id,
-            content: "Received your ID"
+            content: "Hello Baozi M"
         });
     }
-
-    if (msg.type === "ack") {
-        Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Received ack message from ${name}`);
+    
+    if (msg.type === "ack" && msg.content === "Hello Baozi M") {
+        Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Received ack message from ${name} | setted role as ${agentRole ? "COMPLIANT" : "LEADING"}`);
         otherAgent.id = msg.senderId;
     }
+
+    // Avoid messages from external agents
+    if (id !== otherAgent.id) 
+        return;
 
     if (msg.type === "intention") {
         otherAgent.intention = msg.content;
@@ -58,17 +69,19 @@ function initCommunication(deliverooClient) {
     client = deliverooClient;
     client.onMsg(handleMessage);
 
-    // send a broadcast message until the other agent responds
-    let intervalId = setInterval(async () => {
-        if (otherAgent.id === "") {
-            await client.shout({
-                type: "handshake",
-                content: "Hello Baozi"
-            });
-        } else {
-            clearInterval(intervalId);
-        }
-    }, 1000);
+    if (agentRole == agentType.LEADING) {
+        // send a broadcast message until the other agent responds
+        let intervalId = setInterval(async () => {
+            if (otherAgent.id === "") {
+                await client.shout({
+                    type: "handshake",
+                    content: "Hello Baozi C"
+                });
+            } else {
+                clearInterval(intervalId);
+            }
+        }, 1000);
+    }
 }
 
 /**
