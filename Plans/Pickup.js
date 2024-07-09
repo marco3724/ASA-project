@@ -8,6 +8,7 @@ export class Pickup extends Plan{
     constructor(intention) {
         super()
         this.intention = intention;
+        this.planType = "pickup";
     }
 
     async generatePlan(obstacle) {
@@ -100,4 +101,8 @@ export class Pickup extends Plan{
     // //     let action = new TargetMove(this.intention);
     // //    return 
     // }
+
+    get target() {
+        return this.intention.target;
+    }
 }

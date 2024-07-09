@@ -1,9 +1,10 @@
-import {distance,nearestDelivery,readFile} from "./Utility/utility.js"
+import { readFile } from "./Utility/utility.js"
 import * as astar from "./Utility/astar.js"
-import {mapConstant,hyperParams,believes,client, launchConfig} from "./Believes.js"
-import {Intention} from "./Intention.js"
+import { mapConstant, hyperParams, believes, client, launchConfig } from "./Believes.js"
+import { Intention } from "./Intention.js"
 import { Plan } from "./Plans/Plan.js"
 import { Logger } from "./Utility/Logger.js"
+import { initCommunication, sendIntention } from "./Communication/communication.js"
 //Setup
 const logBelieves = (process.argv.includes('-b') || process.argv.includes('--believe'))
 launchConfig.offLineSolver = (process.argv.includes('-o') || process.argv.includes('--offline'))
@@ -185,6 +186,8 @@ client.onParcelsSensing( async ( perceived_parcels ) => {
 
 client.onConfig( (config) => {
     believes.config = config
+    // here we set up the communication with the other agent
+    initCommunication(client);
     believes.config.PARCEL_REWARD_VARIANCE = parseInt(config.PARCEL_REWARD_VARIANCE) //sometimes is a string
     believes.config.rewardDecayRatio = 0 // if the reward decay is infinite, the reward will never decrease so i don't want to consider the distance (in case there is not crowd)
     if(believes.config.PARCEL_DECADING_INTERVAL=="infinite")
@@ -202,10 +205,12 @@ async function agentLoop(){
     Plan.domain = await readFile('./domain.pddl' );
     await new Promise((resolve) => setTimeout(resolve, 100));
     while(true){
-        let plan = intention.generateAndFilterOptions()
-        await plan.generatePlan()
-        intention.revise(plan)
-        await plan.execute()   
+        let plan = intention.generateAndFilterOptions();
+        // send the intention to the other agent
+        await sendIntention(plan.type, plan.target);
+        await plan.generatePlan();
+        intention.revise(plan);
+        await plan.execute();
     }
 }
 

@@ -5,9 +5,24 @@ import {RandomMove} from './Plans/RandomMove.js'
 import { TargetMove } from './Plans/TargetMove.js'
 import { distance,astarDistance } from './Utility/utility.js';
 import { Logger } from './Utility/Logger.js';
+import { sendBelief, otherAgent } from './Communication/communication.js';
 export class Intention{
     constructor(){
         this.queue = [] //for sub intention
+    }
+
+    /**
+     * Function used to check whether the current parcel is the intention of the other agent
+     * @param {*} parcel 
+     */
+    isFriendlyFire(parcel) {
+        if (otherAgent.intention.type === "pickup") {
+            if (parcel.id == otherAgent.intention.target.id) {
+                return true;
+            }
+        } else {
+            return false;
+        }
     }
 
     generateAndFilterOptions(){
@@ -29,7 +44,7 @@ export class Intention{
             Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Deliver parcel to ${nearestDelivery.x}, ${nearestDelivery.y}`);
             console.group()
             return new Putdown({ target: nearestDelivery });
-        } else if (believes.parcels.filter(p => p.carriedBy === null && p.carriedBy != believes.me.id).length !== 0) { // if there are parcels which are not carried by anyone
+        } else if (believes.parcels.filter(p => p.carriedBy === null && p.carriedBy != believes.me.id && !this.isFriendlyFire(p)).length !== 0) { // if there are parcels which are not carried by anyone and that are not the intention of the other agent
             let crowdness = 0
             let bestParcel = []
             //calculate the crowdness
@@ -83,6 +98,9 @@ export class Intention{
              */
             Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Pick up parcel from ${bestParcel.x}, ${bestParcel.y} | Reason: ${intentionReason}`);
             console.group()
+            // filter the parcels removing the one chose to pick up and the one that are already carried by someone
+            let parcelsToShare = believes.parcels.filter(p => p.id !== bestParcel.id && p.carriedBy === null);
+            sendBelief("parcels", parcelsToShare);
             return new Pickup({ target: bestParcel })
         } else {
             /**

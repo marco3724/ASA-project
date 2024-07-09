@@ -8,6 +8,7 @@ export class TargetMove extends Plan{
     constructor(intention,intentionRevision){
         super()
         this.intention = intention
+        this.planType = "targetMove";
         // this.obstacle = this.obstacle
         // this.intensionRevision =  intentionRevision
         // this.replan = replan
@@ -91,4 +92,8 @@ export class TargetMove extends Plan{
     // async execute(){
     //     await Plan.pddlExecutor.exec(this.plan);
     // }
+
+    get target() {
+        return this.intention.target
+    }
 }
