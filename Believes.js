@@ -60,7 +60,7 @@ export const mapConstant = {
 
 //Hyperparameter
 export const hyperParams = {
-  radius_distance: 3,
+  radius_distance: 5,
   min_reward: 15,
   crowdedThreshold: 1,
   retry:{
@@ -71,6 +71,7 @@ export const hyperParams = {
     max_timeout: 30000,
     min_timeout: 10000,
   },
+  max_carryingParcels:100,
   reasonable: 0.9,
   heatmap_decading: 1, // this param is used to decrease the probability of a cell in the heatmap
   counterThreshold: 3,

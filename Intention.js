@@ -34,6 +34,22 @@ export class Intention{
             this.queue.push(...communication.intentionQueue)
             communication.intentionQueue = [] //clear the intention queue
         }
+
+        //calculate if it is worth to deliver the parcel that i'm carrying (this is just one of the condition)
+        let mustDeliver = false
+        if(believes.parcels.filter(p => p.carriedBy === null).length>0){
+        let highestRewardParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) => 
+            (b.reward - astarDistance(believes.me, b,mapConstant.graph)* believes.config.rewardDecayRatio)
+            - 
+            (a.reward - astarDistance(believes.me, a,mapConstant.graph)* believes.config.rewardDecayRatio)
+        )[0]
+    
+        let distanceFromParcel = astarDistance(believes.me, highestRewardParcel,mapConstant.graph)
+        let loss = believes.parcels.filter(p => p.carriedBy === believes.me.id).length * believes.config.rewardDecayRatio * distanceFromParcel
+       
+        //i deliver the parcels that i'm carrying  if the loss is more than the reward that i will get 
+        mustDeliver = loss> highestRewardParcel.reward - believes.config.rewardDecayRatio * distanceFromParcel
+        }
         if (this.queue.length > 0) {
             console.group()
             let intention = this.queue.shift()
@@ -42,9 +58,12 @@ export class Intention{
                 intention.stop = false
             return intention; //return and remove the first intention in the queue
         }
-        else if (believes.parcels.some(p => p.carriedBy === believes.me.id) // if i have some package i may want to deliver
+        else if ( believes.parcels.filter(p => p.carriedBy === believes.me.id).length >=hyperParams.max_carryingParcels || //if i'm carrying too many parcels, deliver first
+                mustDeliver || //if the loss is more than the reward that i will get (from any parcel), i deliver the parcel that i'm carrying first
+            ( 
+            believes.parcels.some(p => p.carriedBy === believes.me.id) // if i have some package i may want to deliver
             && believes.parcels.filter(p => p.carriedBy === null && astarDistance(believes.me, p,mapConstant.graph)<hyperParams.radius_distance).length==0 //if there are no package near me i deliver, otherwise i pick up
-            && believes.deliveryPoints.length > 0 //if there are no non blocked delivery points, i won't deliver for now, i could also reinstate the blocked delivery points, but if the reinstated delivery point is blocked again i would have a loop and basically do nothing ( so we need to wait the blacklist of the delivery points), so if there are no delivery point avbailable is better to pick other packet
+            && believes.deliveryPoints.length > 0) //if there are no non blocked delivery points, i won't deliver for now, i could also reinstate the blocked delivery points, but if the reinstated delivery point is blocked again i would have a loop and basically do nothing ( so we need to wait the blacklist of the delivery points), so if there are no delivery point avbailable is better to pick other packet
         ) { 
             let nearestDelivery = believes.deliveryPoints.sort((a, b) => astarDistance(believes.me, a,mapConstant.graph) - astarDistance(believes.me, b,mapConstant.graph))[0]
             Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Deliver parcel to ${nearestDelivery.x}, ${nearestDelivery.y}`);
@@ -264,7 +283,8 @@ export class Intention{
             if (!believes.parcels.some(p=>p.carriedBy==believes.me.id)) //if i'm not carrying any parcel anymore
                 plan.stop = true
         
-            if (believes.parcels.filter(p => p.carriedBy === null &&
+            if (believes.parcels.filter(p => p.carriedBy === believes.me.id).length < hyperParams.max_carryingParcels && //allowed to stop the putdown if i'm carrying too many parcels
+                 believes.parcels.filter(p => p.carriedBy === null &&
                  astarDistance(believes.me, p,mapConstant.graph)<hyperParams.radius_distance).length!=0 && 
                  plan.plan.length-plan.index>hyperParams.radius_distance) //if a parcel is near me when i try to deliver i want to pick that parcel 
                 plan.stop = true
