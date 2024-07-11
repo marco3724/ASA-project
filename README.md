@@ -2,7 +2,8 @@
 
 ## Authors
 
-[@Marco Wang](https://github.com/marco3724), [@Cristian Murtas](https://github.com/SecondarySkyler)
+- [@Marco Wang](https://github.com/marco3724)
+- [@Cristian Murtas](https://github.com/SecondarySkyler)
 
 ## Description
 
@@ -12,11 +13,15 @@ Project for the course of Autonomous software agent 23/24.
 
 ```
 ASA-project/
+├── Communication/
+│   ├── communication.js       # Handle sending and receiving message from other agent
+|
 ├── Plans/
 │   ├── Pickup.js              # Handle pickup problem generation and replanning
 │   ├── Plan.js                # General Plan execution (parent class)
 │   ├── Putdown.js             # Handle Putdown problem generation and replanning
-│   ├── TargetMove.js          # Handle pickup problem generation and replanning
+│   ├── TargetMove.js          # Handle an arbitrary movement problem generation and replanning
+│   ├── StandStill.js          # Wait other agent signale
 |
 ├── Utility/
 │   ├── Astar.js               # A star algorithm for path finding
