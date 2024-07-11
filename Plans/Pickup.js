@@ -5,8 +5,8 @@ import { Logger } from "../Utility/Logger.js";
 import { removeArbitraryStringPatterns } from "../Utility/utility.js";
 import * as astar from "../Utility/astar.js";
 export class Pickup extends Plan{
-    constructor(intention) {
-        super()
+    constructor(intention,notifyToAwake,belongsToCoordination) {
+        super(notifyToAwake,belongsToCoordination)
         this.intention = intention;
         this.planType = "pickup";
     }
@@ -54,7 +54,7 @@ export class Pickup extends Plan{
         if (launchConfig.offLineSolver) {
             let action = "PICK-UP";
             let args = ["AGENT1", `PARCEL1`, `T_${this.intention.target.x}_${this.intention.target.y}`];
-            this.offlineSolver(current_graph,this.intention.target,action,args);
+            await this.offlineSolver(current_graph,this.intention.target,action,args);
             //to simulate the online solver, if the parcel is in the same position as the agent, the astar will return null, while online solver return the pickup
             if(this.plan == null){
                 if(this.intention.target.x === believes.me.x && this.intention.target.y === believes.me.y){ 
@@ -70,7 +70,7 @@ export class Pickup extends Plan{
             this.plan = await onlineSolver(Plan.domain, problem);
         }
         console.groupEnd()
-        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan generated: ${JSON.stringify(this.plan)}`);
+        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, `Plan generated: ${JSON.stringify(this.plan)}`);
         
         if(!this.plan){
             //it can be uncreachable due to 2 reasons: 1. the parcels is unreachable 2. the parcels is blocked by an agent

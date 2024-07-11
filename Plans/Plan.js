@@ -1,4 +1,5 @@
 import { client,believes,hyperParams } from '../Believes.js';
+import { notifyToAwake } from '../Communication/communication.js';
 import { Logger } from "../Utility/Logger.js";
 import * as astar from "../Utility/astar.js";   
 export class Plan {
@@ -42,7 +43,8 @@ export class Plan {
             if(status && status.length>0){ //update the believes (because the believes are updated before the action is executed)
                 for(let i= 0; i< status.length;i++){
                     let index = believes.parcels.findIndex(p=>p.id==status[i].id)
-                    believes.parcels[index].carriedBy = believes.me.id
+                    if(index!==-1)
+                        believes.parcels[index].carriedBy = believes.me.id
                 }
             }
             return status
@@ -57,17 +59,23 @@ export class Plan {
             return status
         }]
     ])
-    constructor(){
+    constructor(notifyToAwake,belongsToCoordination){
         this.plan = null
         this.index = 0
         this.stop = false
         this.planType = ""
+        this.notifyToAwake = notifyToAwake //after finishing the last step of the plan, notify the other agent to awake
+        this.needCoordination = false
+        this.coordinationInformation = null,
+        this.belongsToCoordination = belongsToCoordination
     }
     //generatePlan Interface
     async generatePlan(){
         throw new Error("generatePlan is not implemented")
     }
-    offlineSolver(current_graph,IntentionTarget,lastAction,lastArgs){
+
+    async offlineSolver(current_graph,IntentionTarget,lastAction,lastArgs){
+        await new Promise( res => setImmediate( res ) );
         let current_pos = current_graph.grid[Math.round(believes.me.x)][Math.round(believes.me.y)];
         let target = current_graph.grid[IntentionTarget.x][IntentionTarget.y];
         let generated_plan = astar.astar.search(current_graph, current_pos, target, {diagonal: false});
@@ -123,12 +131,18 @@ export class Plan {
             let actionName = this.plan[this.index].action
             let exec= this.actions.get(actionName)
             let status = await exec()
+
+            //if it is the last step of the plan and i need to notify the other agent to awake, i will send him a message
+            if(this.index == this.plan.length-1 && this.notifyToAwake){
+                notifyToAwake()
+            }
             Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.DEBUG, `status ${JSON.stringify(status)}`);
 
             if(this.stop){
                 Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan stopped due to revision`);
                 return
             }
+
 
             if(!status){
                 retry++ //since it has failed, increment the retry number

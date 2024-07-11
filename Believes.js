@@ -37,7 +37,10 @@ export const believes = {
   }
 
 }
-
+export const communication = {
+  intentionQueue: [],
+  shouldTheAgentAwake: false  
+}
 export const launchConfig = {
   offLineSolver: false,
 }

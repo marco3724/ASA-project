@@ -201,16 +201,16 @@ client.onConfig( (config) => {
 
 
 async function agentLoop(){
-    let intention = new Intention()
+    let agent = new Intention()
     Plan.domain = await readFile('./domain.pddl' );
     await new Promise((resolve) => setTimeout(resolve, 100));
     while(true){
-        let plan = intention.generateAndFilterOptions();
+        let intention = agent.generateAndFilterOptions();
         // send the intention to the other agent
-        await sendIntention(plan.type, plan.target);
-        await plan.generatePlan();
-        intention.revise(plan);
-        await plan.execute();
+        await sendIntention(intention.type, intention.target);
+        await intention.generatePlan();
+        agent.revise(intention);
+        await intention.execute();
     }
 }
 

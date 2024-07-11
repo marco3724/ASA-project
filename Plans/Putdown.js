@@ -4,10 +4,10 @@ import { mapConstant, believes, hyperParams, launchConfig} from "../Believes.js"
 import { Logger } from "../Utility/Logger.js";
 import { removeArbitraryStringPatterns } from "../Utility/utility.js";
 import * as astar from "../Utility/astar.js";
-
+import { otherAgent } from "../Communication/communication.js";
 export class Putdown extends Plan{
-    constructor(intention) {
-        super()
+    constructor(intention,notifyToAwake,belongsToCoordination) {
+        super(notifyToAwake,belongsToCoordination)
         this.intention = intention;
         this.planType = "putdown";
     }
@@ -22,6 +22,7 @@ export class Putdown extends Plan{
         let current_graph = mapConstant.graph;
 
         if(obstacle){//obstacle is formed like this: "t_1_1"
+
             mapTiles = removeArbitraryStringPatterns(mapConstant.pddlTiles,obstacle)
             mapNeighbors = removeArbitraryStringPatterns(mapConstant.pddlNeighbors,obstacle)
             Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.DEBUG, JSON.stringify(mapTiles));
@@ -58,18 +59,69 @@ export class Putdown extends Plan{
         if (launchConfig.offLineSolver) {
             let action = "PUT-DOWN";
             let args = ["AGENT1", `PARCEL1`, `T_${this.intention.target.x}_${this.intention.target.y}`];
-            this.offlineSolver(current_graph, this.intention.target,action,args);
+            await this.offlineSolver(current_graph, this.intention.target,action,args);
         } else {
             this.plan = await onlineSolver(Plan.domain, problem);
         }
         console.groupEnd()
-        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan generated: ${JSON.stringify(this.plan)}`);
+        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, `Plan generated: ${JSON.stringify(this.plan)}`);
 
         if (!this.plan) {
             //it can't be uncreachable due to 2 reasons: 1. the delivery point is unreachable 2. the delivery point is blocked by an obstacle (agent that may be blocked by us, or it is stuck internally)
             let message =obstacle ? `OBSTACLE: Impossible reaching the target ${deliveryTile} from ${believes.me.x},${believes.me.y} because of the obstacle ${obstacle}` : `NO PATH: Impossible reaching the target ${deliveryTile} from ${believes.me.x},${believes.me.y}`;
             Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO,message);
-            
+
+            //impossible to reach the target, i want to check if it is my firend that is blocking me
+           
+            if(otherAgent.id!="" && believes.agentsPosition.has(otherAgent.id)){
+                let agent = believes.agentsPosition.get(otherAgent.id);
+                let [_,x,y] = obstacle.split("_");
+                if(agent.x ==x && agent.y == y){//the agent blocking him is his friend
+                    Logger.logEvent(Logger.logType.COORDINATION, Logger.logLevels.INFO,`NEED COORDINATION: The target is blocked by my friend ${otherAgent.id}`);
+                    this.needCoordination = true;
+                    this.coordinationInformation = {
+                        obstacle: obstacle,
+                    }
+                }
+            }
+
+            // if(otherAgent.id!="" && believes.agentsPosition.has(otherAgent.id)){
+            //     let agent = believes.agentsPosition.get(otherAgent.id);
+            //     let [_,x,y] = obstacle.split("_");
+            //     if(agent.x ==x && agent.y == y){
+            //         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO,`The target is blocked by my friend ${otherAgent.id}`);
+            //         //send a message to the other agent to coordinate
+            //         let availableDirections = [[0,-1],[0,1],[1,0],[-1,0]];
+            //         for (let i = 0; i < availableDirections.length; i++) {  
+            //             let new_x = parseInt(agent.x) + availableDirections[i][0];
+            //             let new_y = parseInt(agent.y) + availableDirections[i][1];
+            //             if(mapConstant.map[x][y] != 0){
+                            
+            //                 let reply = await client.ask(otherAgent.id, {
+            //                     type: "coordination",
+            //                     senderId: client.id,
+            //                     content: [
+            //                         new TargetMove({target: { x: new_x, y: new_y }}),
+
+            //                     ]
+            //                 });
+
+            //                 break;
+            //             }
+            //         }
+            //         mapConstant.map[agent.x][parseInt(y)] = 0;//remove the obstacle
+            //         client.say(otherAgent.id, {
+            //             type: "coordination",
+            //             senderId: client.id,
+            //             content: [
+
+            //             ]
+            //         });
+            //     }   
+            // }
+
+
+
             //add the delivery point to the black list
             let index = believes.deliveryPoints.findIndex(obj => obj.x === this.intention.target.x && obj.y === this.intention.target.y);
             believes.blackList.deliveryPoints.push(believes.deliveryPoints[index]);//temporary ignore this delivery point, since it is unreachables
@@ -97,7 +149,7 @@ export class Putdown extends Plan{
             return;
         }
         console.groupEnd()
-        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan generated: ${JSON.stringify(this.plan)}`);
+        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, `Plan generated: ${JSON.stringify(this.plan)}`);
     }
 
     get target() {

@@ -1,5 +1,9 @@
 import fs from 'fs';
 import * as astar from "./astar.js";
+import { Pickup } from '../Plans/Pickup.js';
+import { Putdown } from '../Plans/Putdown.js';
+import { TargetMove } from '../Plans/TargetMove.js';
+import { StandStill } from '../Plans/StandStill.js';
 export function nearestDelivery(){
     let min = Number.MAX_VALUE
     let target;
@@ -38,4 +42,16 @@ export function astarDistance(start, end, graph){
     let endNode = graph.grid[end.x][end.y]
     let result = astar.astar.search(graph, startNode, endNode)
     return result.length
+}
+export function convertToPlanType(intention){
+    switch(intention.type){
+        case "pickup":
+            return new Pickup(intention,intention.notifyToAwake ,intention.belongsToCoordination)
+        case "putdown":
+            return new Putdown(intention,intention.notifyToAwake,intention.belongsToCoordination)
+        case "targetMove":
+            return new TargetMove(intention,intention.notifyToAwake,intention.belongsToCoordination)
+        case "standStill":
+            return new StandStill(intention,intention.notifyToAwake,intention.belongsToCoordination)
+    }
 }

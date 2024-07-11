@@ -1,6 +1,7 @@
 import { DeliverooApi } from "@unitn-asa/deliveroo-js-client";
 import { Logger } from "../Utility/Logger.js";
-import { believes } from "../Believes.js";
+import { believes ,communication} from "../Believes.js";
+import { convertToPlanType } from "../Utility/utility.js";
 
 let client = null;
 let agentType = {
@@ -37,9 +38,25 @@ function handleMessage(id, name, msg, reply) {
     // Avoid messages from external agents
     if (id !== otherAgent.id) 
         return;
+    if(msg.type === "coordination") {
+        Logger.logEvent(Logger.logType.COORDINATION, Logger.logLevels.INFO, `Received coordination intentions from ${name}`);
+        // if we receive a coordination message, we execute the actions
+        JSON.parse(msg.content).forEach(intention => {
+            communication.intentionQueue.push(convertToPlanType(intention) );
+        });
+        // console.log("COMMUNICATION INTENTION QUEUE");
+        // console.log(communication.intentionQueue);
+
+    }
+    if(msg.type === "awake") {
+        Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Received awake message from ${name}`);
+        // if we receive a coordination message, we execute the actions
+        communication.shouldTheAgentAwake = true;
+    }
 
     if (msg.type === "intention") {
         otherAgent.intention = msg.content;
+        console.log("RICEVUTO INTENTION", msg);
         Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Received intention | ${name} wants to ${otherAgent.intention.type} at ${otherAgent.intention.target.x}, ${otherAgent.intention.target.y}`);
     }
 
@@ -90,6 +107,7 @@ function initCommunication(deliverooClient) {
  * @param {Object} tg the target of the intention
  */
 async function sendIntention(t, tg) {
+    console.log("SENDING INTENTION TO OTHER AGENT", t, tg)
     Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Sending intention to ${otherAgent.id}`);
     if (client) {
         await client.say(otherAgent.id, {
@@ -98,6 +116,16 @@ async function sendIntention(t, tg) {
                 type: t,
                 target: tg
             }
+        });
+    }
+    return;
+}
+
+async function notifyToAwake() {
+    Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Awaking the ${otherAgent.id}`);
+    if (client) {
+        await client.say(otherAgent.id, {
+            type: "awake"
         });
     }
     return;
@@ -124,4 +152,5 @@ export {
     otherAgent,
     sendIntention,
     sendBelief,
+    notifyToAwake
 };

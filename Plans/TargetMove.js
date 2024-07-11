@@ -5,8 +5,8 @@ import { Logger } from "../Utility/Logger.js";
 import {removeArbitraryStringPatterns} from "../Utility/utility.js";
 import * as astar from "../Utility/astar.js"
 export class TargetMove extends Plan{
-    constructor(intention,intentionRevision){
-        super()
+    constructor(intention,notifyToAwake,belongsToCoordination){
+        super(notifyToAwake,belongsToCoordination)
         this.intention = intention
         this.planType = "targetMove";
         // this.obstacle = this.obstacle
@@ -53,7 +53,7 @@ export class TargetMove extends Plan{
         
         console.groupCollapsed("Generating plan");
         if (launchConfig.offLineSolver) {
-            this.offlineSolver(current_graph,intention.target)
+            await this.offlineSolver(current_graph,intention.target)
         } else {
             this.plan = await onlineSolver(domain, problem);
         }
@@ -61,7 +61,7 @@ export class TargetMove extends Plan{
         //                 const direction = result[i].movement
         //                 status = await client.move(direction)
         console.groupEnd()
-        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO, `Plan generated: ${JSON.stringify(this.plan)}`);
+        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, `Plan generated: ${JSON.stringify(this.plan)}`);
 
     //     let status,failed_movements=0
     //     let {me} = believes

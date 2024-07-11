@@ -1,4 +1,4 @@
-import { believes, hyperParams, mapConstant } from './Believes.js';
+import { believes, client, communication, hyperParams, mapConstant } from './Believes.js';
 import { Pickup } from './Plans/Pickup.js';
 import { Putdown } from './Plans/Putdown.js';
 import {RandomMove} from './Plans/RandomMove.js'
@@ -6,6 +6,7 @@ import { TargetMove } from './Plans/TargetMove.js'
 import { distance,astarDistance } from './Utility/utility.js';
 import { Logger } from './Utility/Logger.js';
 import { sendBelief, otherAgent } from './Communication/communication.js';
+import { StandStill } from './Plans/StandStill.js';
 export class Intention{
     constructor(){
         this.queue = [] //for sub intention
@@ -28,10 +29,15 @@ export class Intention{
     generateAndFilterOptions(){
         console.groupEnd()
         Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.INFO, `Parcels: ${JSON.stringify(believes.parcels)}`);
+        if(communication.intentionQueue.length>0){
+            Logger.logEvent(Logger.logType.COORDINATION, Logger.logLevels.INFO, `Fill the queue with the intention sent from the other agent, need to coordinate`);
+            this.queue.push(...communication.intentionQueue)
+            communication.intentionQueue = [] //clear the intention queue
+        }
         if (this.queue.length > 0) {
-            Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Executing from queue`);
             console.group()
             let intention = this.queue.shift()
+            Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Executing from queue: ${intention.planType}`);
             if (this.queue.length==0) //restart the original intention
                 intention.stop = false
             return intention; //return and remove the first intention in the queue
@@ -43,7 +49,7 @@ export class Intention{
             let nearestDelivery = believes.deliveryPoints.sort((a, b) => astarDistance(believes.me, a,mapConstant.graph) - astarDistance(believes.me, b,mapConstant.graph))[0]
             Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Deliver parcel to ${nearestDelivery.x}, ${nearestDelivery.y}`);
             console.group()
-            return new Putdown({ target: nearestDelivery });
+            return new Putdown({ target: nearestDelivery },false,false);
         } else if (believes.parcels.filter(p => p.carriedBy === null && p.carriedBy != believes.me.id && !this.isFriendlyFire(p)).length !== 0) { // if there are parcels which are not carried by anyone and that are not the intention of the other agent
             let crowdness = 0
             let bestParcel = []
@@ -101,7 +107,7 @@ export class Intention{
             // filter the parcels removing the one chose to pick up and the one that are already carried by someone
             let parcelsToShare = believes.parcels.filter(p => p.id !== bestParcel.id && p.carriedBy === null);
             sendBelief("parcels", parcelsToShare);
-            return new Pickup({ target: bestParcel })
+            return new Pickup({ target: bestParcel },false,false)
         } else {
             /**
              * Here im thinking that probably using a Map is not a good idea.
@@ -120,7 +126,7 @@ export class Intention{
                     let target = believes.heatmap.get(randomKey);
                     Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Exploring to ${target.x}, ${target.y}`);
                     console.group();
-                    return new TargetMove({ target: { x: target.x, y: target.y } });
+                    return new TargetMove({ target: { x: target.x, y: target.y } },false,false);
                 } else {
 
                     // Cumulative probability
@@ -181,7 +187,7 @@ export class Intention{
                     //let target = possibleTargets[random];
                     Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Exploring to ${target.x}, ${target.y}`);
                     console.group();
-                    return new TargetMove({ target: { x: target.x, y: target.y } });
+                    return new TargetMove({ target: { x: target.x, y: target.y } },false,false);
                 }
             }        
             console.log("NON VA BENE")
@@ -189,19 +195,30 @@ export class Intention{
         }
     }
 
-    async revise(plan){
-        if(plan instanceof Pickup)
-            this.revisePickUp(plan)
-        else if(plan instanceof Putdown)
-            this.revisePutDown(plan)
-        else if(plan instanceof TargetMove)
-            this.reviseTargetMove(plan)
+    async revise(intention){
+        //if there is a coordination going on, i dont' want my intention to be revised. no need for distraction
+        if(!intention.belongsToCoordination){
+            if(intention instanceof Pickup)
+                this.revisePickUp(intention)
+            else if(intention instanceof Putdown)
+                this.revisePutDown(intention)
+            else if(intention instanceof TargetMove)
+                this.reviseTargetMove(intention)
+        }
+        else{
+            Logger.logEvent(Logger.logType.COORDINATION, Logger.logLevels.INFO,'Coordination, needs to be concetrated! No revise for pickup putdown and target move')
+        }
+        if(intention instanceof StandStill)
+            this.reviseStandStill(intention)
     }
     
     async revisePickUp(plan){
         const {intention} = plan     
         Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO,'Starting to revise pick up')
         while ( !plan.stop ) {
+            //if have some communication for coordination it means that we need to stop and
+            if(communication.intentionQueue.length>0)
+                plan.stop = true
             //if i can't sense the parcel and that parcel is within my view, it mean that is gone or someone took it, so stop, but if it is outside of my view the parcel may still be there
             if (!believes.parcels.some(p=>(p.id==intention.target.id)) && 
             astarDistance(intention.target,believes.me,mapConstant.graph)<believes.config.PARCELS_OBSERVATION_DISTANCE-1){ //this solve the problem of the parcel that is outside of the view once i have the intention to pick it
@@ -219,7 +236,7 @@ export class Intention{
                     this.queue.push(plan)
                 } 
                     
-                this.queue.unshift(new Pickup({target: parcelsOnTheWay[0]}))
+                this.queue.unshift(new Pickup({target: parcelsOnTheWay[0]},false,false))
             }
 
             let deliveryOnPath = believes.deliveryPoints.filter(p => astarDistance(believes.me, p,mapConstant.graph)<2)
@@ -232,7 +249,7 @@ export class Intention{
                 } 
                 console.log("DELIVERY ON PATH")
                 let nearestDeliveryPoint = deliveryOnPath.sort((a, b) => astarDistance(believes.me, a,mapConstant.graph) - astarDistance(believes.me, b,mapConstant.graph))[0]
-                this.queue.unshift(new Putdown({target: nearestDeliveryPoint}))
+                this.queue.unshift(new Putdown({target: nearestDeliveryPoint},false,false))
 
             }
 
@@ -254,16 +271,92 @@ export class Intention{
             
             await new Promise( res => setImmediate( res ) );
         }
+        //it means that my friend is blocking me, and we need to coordinates somehow
+        if(plan.needCoordination ){
+            let agent = believes.agentsPosition.get(otherAgent.id);
+            let availableDirections = [[0,-1],[0,1],[1,0],[-1,0]];//the direction that my friend can move
+            let [_,x,y] = plan.coordinationInformation.obstacle.split("_");
+            this.queue.push(new StandStill({ target: {x:x,y:y} },false,true))//da cambiare coordinate anche s enon usato
+            Logger.logEvent(Logger.logType.COORDINATION, Logger.logLevels.INFO,`STARTING COORDINATION WITH AGENT ${otherAgent.id}`);
+            for (let i = 0; i < availableDirections.length; i++) {  
+                let new_x = parseInt(agent.x) + availableDirections[i][0];
+                let new_y = parseInt(agent.y) + availableDirections[i][1];
+                if(mapConstant.map[new_x][new_y] != 0 && (new_x!=believes.me.x || new_y!=believes.me.y)){
+                    Logger.logEvent(Logger.logType.COORDINATION, Logger.logLevels.INFO,`Found where ${otherAgent.id} can move: ${new_x},${new_y}`);
+                    //i start filling the other agent's (B) coordination queue
+                    /*
+                    1) he (B) will need to move away and stand still
+                    2) this agent (A) will need to put down the parcel in the position where B was from
+                    3) this agent (A) will need to move back to the position where he was and stand still
+                    4) so B will need to pick up the parcel and and notify A that he can finally move
+                    */
+                    let reply = await client.say(otherAgent.id, {
+                        type: "coordination",
+                        senderId: client.id,
+                        content: JSON.stringify([
+                            {
+                                type: "targetMove",
+                                target: { x: new_x, y: new_y },
+                                notifyToAwake:true,
+                                belongsToCoordination:true
+                            },{
+                                type:"standStill",
+                                target: { x: new_x, y:new_y  },
+                                belongsToCoordination:true
+                            },{
+                                type: "pickup",
+                                target: { x: x, y: y },
+                                belongsToCoordination:true
+                                
+                            },
+                            {
+                                type: "putdown",
+                                target: { x: plan.target.x, y: plan.target.y },
+                                notifyToAwake:true,
+                                belongsToCoordination:true
+                            }
+
+
+                        ])
+                    });
+                    Logger.logEvent(Logger.logType.COORDINATION, Logger.logLevels.INFO,`Coordination message sent to agent ${otherAgent.id} with reply: ${reply}`);
+                    Logger.logEvent(Logger.logType.COORDINATION, Logger.logLevels.INFO,`Setting my coordination plan`);
+
+
+                    // i want to put down the parcel in the new position, where my friend has moved, and then move back so he can pick up the parcel
+                    
+                    this.queue.push(new Putdown({ target: {x:x,y:y} },false,true)) 
+                    this.queue.push(new TargetMove({ target: { x: believes.me.x, y: believes.me.y } },true,true))
+                    this.queue.push(new StandStill({ target: {x:x,y:y} },false,false))//da cambiare coordinate anche s enon usato
+
+                    break;
+                }
+            }
+        }
     }
 
     async reviseTargetMove(plan){
         const {intention} = plan
         Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO,'Starting to revise target move')
         while ( !plan.stop ) {
+            //if have some communication for coordination it means that we need to stop and
+            if(communication.intentionQueue.length>0)
+                plan.stop = true
             //if i sense some parcel (that is not already carried by anyone), instead of exploring i want to pick that parcel 
             //(the carried by null condition needed only when no delivery point is available, because the agent keep sensing his packet and stop the target move, but we don't want that)
             if (believes.parcels.filter(p => p.carriedBy == null).length>0){ 
                 plan.stop = true
+            } 
+            await new Promise( res => setImmediate( res ) );
+        }
+    }
+    async reviseStandStill(plan){
+        const {intention} = plan
+        Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO,'Starting to revise stand still')
+        while ( !plan.stop ) {
+            if(communication.shouldTheAgentAwake){
+                plan.stop = true //the agent need to awake
+                communication.shouldTheAgentAwake = false
             }
             await new Promise( res => setImmediate( res ) );
         }
