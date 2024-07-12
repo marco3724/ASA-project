@@ -1,6 +1,6 @@
 import { Plan } from "./Plan.js";
 import { onlineSolver, PddlProblem } from "@unitn-asa/pddl-client";
-import { mapConstant, believes, launchConfig } from "../Believes.js";  
+import { mapConstant, believes, launchConfig ,hyperParams} from "../Believes.js";  
 import { Logger } from "../Utility/Logger.js";
 import { removeArbitraryStringPatterns } from "../Utility/utility.js";
 import * as astar from "../Utility/astar.js";
@@ -25,7 +25,7 @@ export class Pickup extends Plan{
 
             // update the graph
             if(launchConfig.offLineSolver){
-                let mapWithObstacle = mapConstant.map;
+                let mapWithObstacle = JSON.parse(JSON.stringify(mapConstant.map));
                 let obstacleCoordinates = obstacle.split("_");
                 // Set to 0 the tile where the obstacle is
                 mapWithObstacle[parseInt(obstacleCoordinates[1])][parseInt(obstacleCoordinates[2])] = 0;
@@ -81,6 +81,17 @@ export class Pickup extends Plan{
             let index = believes.parcels.findIndex(obj => obj.id === this.intention.target.id);
             believes.blackList.parcels.push(this.intention.target.id);//permanently ignore this parcel, since it is unreachables
             believes.parcels.splice(index, 1);//remove the parcels from the list
+            if(obstacle){
+                let timeout = Math.floor(Math.random() * (hyperParams.blackList.max_timeout - hyperParams.blackList.min_timeout + 1) + hyperParams.blackList.min_timeout);
+                Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.INFO, `parcel tile ${this.intention.target.id} added to the blacklist for ${timeout}ms`);
+                setTimeout(() => {
+                    let index = believes.blackList.parcels.findIndex(id => id === this.intention.target.id);
+                    believes.parcels.push(believes.blackList.parcels[index]);//add the parcel  back to the list
+                    believes.blackList.parcels.splice(index, 1);//remove the parcel  from the blacklist
+                    Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.INFO, `parcel tile ${this.intention.target.id} removed from the blacklist`);
+                }, timeout);
+            }
+
             if(!obstacle){// if i want to pick a parcel, and there is no obstacle but it is unreachable, it means that the spawn point is unreachable (and never will be)
                 Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO,`Blacklist the spawn point: Can't reach the spawn point ${parcelTile} from ${believes.me.x},${believes.me.y}`);
                 believes.blackList.spawnPoints.push(this.intention.target) //ignor all the parcel that spawn there
