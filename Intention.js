@@ -297,7 +297,6 @@ export class Intention{
             let agent = believes.agentsPosition.get(otherAgent.id);
             let availableDirections = [[0,-1],[0,1],[1,0],[-1,0]];//the direction that my friend can move
             let [_,x,y] = plan.coordinationInformation.obstacle.split("_");
-            this.queue.push(new StandStill({ target: {x:x,y:y} },false,true))//da cambiare coordinate anche s enon usato
             Logger.logEvent(Logger.logType.COORDINATION, Logger.logLevels.INFO,`STARTING COORDINATION WITH AGENT ${otherAgent.id}`);
             for (let i = 0; i < availableDirections.length; i++) {  
                 let new_x = parseInt(agent.x) + availableDirections[i][0];
