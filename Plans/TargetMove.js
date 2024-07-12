@@ -30,7 +30,7 @@ export class TargetMove extends Plan{
 
             // update the graph
             if(launchConfig.offLineSolver){
-            let mapWithObstacle = mapConstant.map;
+            let mapWithObstacle =  JSON.parse(JSON.stringify(mapConstant.map)) ;
             let obstacleCoordinates = obstacle.split("_");
             mapWithObstacle[parseInt(obstacleCoordinates[1])][parseInt(obstacleCoordinates[2])] = 0;
             current_graph = new astar.Graph(mapWithObstacle);

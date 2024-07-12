@@ -30,7 +30,7 @@ export class Putdown extends Plan{
 
             // update the graph
             if(launchConfig.offLineSolver){
-                let mapWithObstacle = mapConstant.map;
+                let mapWithObstacle =  JSON.parse(JSON.stringify(mapConstant.map));
                 let obstacleCoordinates = obstacle.split("_");
                 // Set to 0 the tile where the obstacle is
                 mapWithObstacle[parseInt(obstacleCoordinates[1])][parseInt(obstacleCoordinates[2])] = 0;
@@ -75,6 +75,12 @@ export class Putdown extends Plan{
             //a put down cal be deliver into an uncreachble point which has not obstacle (but is due to the map), so we need to check if there is an obstacle amd if that obracle is our friend
             //if dont check an obstacle every time it is impossible we are assuming is our friend or due to an obstacle when it is not
             //i want to coordinates only if there is only one delivery point left, otherwise i want to try other delivery points
+            console.log("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB")
+            console.log(believes.deliveryPoints.length)
+            console.log(otherAgent.id)
+            console.log(believes.agentsPosition.has(otherAgent.id))
+            console.log(obstacle)
+            console.log("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBVVVVVVBB")
             if(believes.deliveryPoints.length == 1 && otherAgent.id!="" && believes.agentsPosition.has(otherAgent.id) && obstacle){
                 let agent = believes.agentsPosition.get(otherAgent.id);
                 let [_,x,y] = obstacle.split("_");
@@ -131,9 +137,9 @@ export class Putdown extends Plan{
 
             //if the delivery point is unreachable due to an obstacle, the obstacle may be removed, so we can retry
             //if the unreachability is not due an obastacle it mean that we can never reach that delivery point, keep that delivery point in the black list
-            let timeout = Math.floor(Math.random() * (hyperParams.blackList.max_timeout - hyperParams.blackList.min_timeout + 1) + hyperParams.blackList.min_timeout);
-            Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.INFO, `Delivery tile ${deliveryTile} added to the blacklist for ${timeout}ms`);
             if(obstacle){
+                let timeout = Math.floor(Math.random() * (hyperParams.blackList.max_timeout - hyperParams.blackList.min_timeout + 1) + hyperParams.blackList.min_timeout);
+                Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.INFO, `Delivery tile ${deliveryTile} added to the blacklist for ${timeout}ms`);
                 setTimeout(() => {
                     let index = believes.blackList.deliveryPoints.findIndex(obj => obj.x === this.intention.target.x && obj.y === this.intention.target.y);
                     believes.deliveryPoints.push(believes.blackList.deliveryPoints[index]);//add the delivery point back to the list
