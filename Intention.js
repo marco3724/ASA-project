@@ -346,7 +346,7 @@ export class Intention{
 
 
                     // i want to put down the parcel in the new position, where my friend has moved, and then move back so he can pick up the parcel
-                    
+                    this.queue.push(new StandStill({ target: {x:x,y:y} },false,true))//da cambiare coordinate anche s enon usato
                     this.queue.push(new Putdown({ target: {x:x,y:y} },false,true)) 
                     this.queue.push(new TargetMove({ target: { x: believes.me.x, y: believes.me.y } },true,true))
                     this.queue.push(new StandStill({ target: {x:x,y:y} },false,false))//da cambiare coordinate anche s enon usato
