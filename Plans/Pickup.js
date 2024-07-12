@@ -81,7 +81,20 @@ export class Pickup extends Plan{
             let index = believes.parcels.findIndex(obj => obj.id === this.intention.target.id);
             believes.blackList.parcels.push(this.intention.target.id);//permanently ignore this parcel, since it is unreachables
             believes.parcels.splice(index, 1);//remove the parcels from the list
-
+            if(!obstacle){// if i want to pick a parcel, and there is no obstacle but it is unreachable, it means that the spawn point is unreachable (and never will be)
+                Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO,`Blacklist the spawn point: Can't reach the spawn point ${parcelTile} from ${believes.me.x},${believes.me.y}`);
+                believes.blackList.spawnPoints.push(this.intention.target) //ignor all the parcel that spawn there
+                believes.heatmap.delete(parcelTile) //so i won't try to reach it again
+                //normalize the weights
+                let sum = 0;
+                believes.heatmap.forEach((value, key) => {
+                    sum += value.prob;
+                });
+                // update each prob such that currprob = currprob/sum
+                believes.heatmap.forEach((value, key) => {
+                    believes.heatmap.set(key, {...value, prob: value.prob / sum});
+                });
+            }
 
             //debugging purpose log
             Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.DEBUG, "Parcels"+JSON.stringify(believes.parcels));

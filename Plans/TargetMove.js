@@ -57,36 +57,28 @@ export class TargetMove extends Plan{
         } else {
             this.plan = await onlineSolver(domain, problem);
         }
-        //             for (let i =0;i < result.length;i++){
-        //                 const direction = result[i].movement
-        //                 status = await client.move(direction)
+        // if(!this.plan){ NO MORE NEEDED
+        //     if(!obstacle){//if the plan is null and there is no obstacle, it means that the target is unreachable (and never will be)
+        //         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO,`Blacklist the spawn point: Can't reach the spawn point ${destinationTile} from ${believes.me.x},${believes.me.y}`);
+        //         believes.blackList.spawnPoints.push(intention.target)
+        //         believes.heatmap.delete(destinationTile)
+        //         //normalize the weights
+        //         let sum = 0;
+        //         believes.heatmap.forEach((value, key) => {
+        //             sum += value.prob;
+        //         });
+        //         // update each prob such that currprob = currprob/sum
+        //         believes.heatmap.forEach((value, key) => {
+        //             believes.heatmap.set(key, {...value, prob: value.prob / sum});
+        //         });
+        //     }
+        //     this.stop = true;
+        //     return;
+        // }
         console.groupEnd()
         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, `Plan generated: ${JSON.stringify(this.plan)}`);
 
-    //     let status,failed_movements=0
-    //     let {me} = believes
-    //     let graph = mapConstant.graph
-
-    //     let current_pos = graph.grid[Math.round(me.x)][Math.round(me.y)];
-    //     let parcel_node = graph.grid[intention.target.x][intention.target.y];
-    //     let result = astar.astar.search(graph, current_pos, parcel_node, {diagonal: false});
-
-    //     for (let i =0;i < result.length;i++){
-    //         const direction = result[i].movement
-
-    //         status = await client.move(direction)
-    //         if(status){
-    //             console.log("Movement status:",status)
-    //             believes.me.x = status.x
-    //             believes.me.y = status.y
-    //         }
-    //         else{
-    //             console.log("Failed movements") 
-    //             i--
-    //             failed_movements++
-    //         }
-
-    // }
+ 
     }
 
     // async execute(){

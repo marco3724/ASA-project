@@ -71,9 +71,10 @@ export class Putdown extends Plan{
             let message =obstacle ? `OBSTACLE: Impossible reaching the target ${deliveryTile} from ${believes.me.x},${believes.me.y} because of the obstacle ${obstacle}` : `NO PATH: Impossible reaching the target ${deliveryTile} from ${believes.me.x},${believes.me.y}`;
             Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO,message);
 
-            //impossible to reach the target, i want to check if it is my firend that is blocking me
-           
-            if(otherAgent.id!="" && believes.agentsPosition.has(otherAgent.id)){
+            //impossible to reach the target, i want to check if it is my friend that is blocking me, 
+            //a put down cal be deliver into an uncreachble point which has not obstacle (but is due to the map), so we need to check if there is an obstacle amd if that obracle is our friend
+            //if dont check an obstacle every time it is impossible we are assuming is our friend or due to an obstacle when it is not
+            if(otherAgent.id!="" && believes.agentsPosition.has(otherAgent.id) && obstacle){
                 let agent = believes.agentsPosition.get(otherAgent.id);
                 let [_,x,y] = obstacle.split("_");
                 if(agent.x ==x && agent.y == y){//the agent blocking him is his friend

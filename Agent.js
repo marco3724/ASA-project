@@ -1,4 +1,4 @@
-import { readFile } from "./Utility/utility.js"
+import { readFile, astarDistance} from "./Utility/utility.js"
 import * as astar from "./Utility/astar.js"
 import { mapConstant, hyperParams, believes, client, launchConfig } from "./Believes.js"
 import { Intention } from "./Intention.js"
@@ -113,7 +113,7 @@ client.onAgentsSensing( (agents) => {
        
 } )
 
-
+let firstTime = true
 client.onYou( ( {id, name, x, y, score} ) => {
     believes.me.id = id
     believes.me.name = name
@@ -123,24 +123,44 @@ client.onYou( ( {id, name, x, y, score} ) => {
     if(logBelieves)
         Logger.logEvent(Logger.logType.BELIEVES,Logger.logLevels.INFO,"Me: "+JSON.stringify(believes.me))
 
-    //Update heatmap
-    // let maxViewingDistance = believes.config.PARCELS_OBSERVATION_DISTANCE
-    // for (let i = 0; i < maxViewingDistance; i++) {
-    //     for (let j = 0; j < maxViewingDistance; j++) {
-    //         let x = believes.me.x + i;
-    //         let y = believes.me.y + j;
-    //         if (believes.heatmap.has(`t_${x}_${y}`)) {
-    //             let tileInfo = believes.heatmap.get(`t_${x}_${y}`);
-    //             // if the probability is not zero and the tile is not a parcel spawner
-    //             if (tileInfo.prob > 0 && !mapConstant.parcelSpawner.some(spawner => spawner.x == x && spawner.y == y)) {
-    //                 // if there isn't a parcel on this tile, decrease the probability
-    //                 if (!believes.parcels.some(p => p.x == x && p.y == y)) {
-    //                     believes.heatmap.set(`t_${x}_${y}`, {...tileInfo, currentParcelId: null, prob: tileInfo.prob - hyperParams.heatmap_decading});
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
+    //once i spawn, i want to remove all the unreachable delivery points and spawn points
+    if(firstTime){ //doing it only at the beggining (assuming that the map doesn;t change)
+        firstTime = false
+        Logger.logEvent(Logger.logType.BELIEVES,Logger.logLevels.INFO,"Removing unreachable delivery points and spawn points")
+        let reachableDeliveryPoints = []
+        for (let i = 0; i < believes.deliveryPoints.length; i++) {
+            if ((believes.deliveryPoints[i].x==believes.me.x && believes.deliveryPoints[i].y == believes.me.y) || astarDistance(believes.deliveryPoints[i], believes.me,mapConstant.graph)!=0){
+                reachableDeliveryPoints.push(believes.deliveryPoints[i]);
+            }
+            else{
+                believes.blackList.deliveryPoints.push(believes.deliveryPoints[i]);
+            }
+        }
+        believes.deliveryPoints = reachableDeliveryPoints;
+
+        let reachableSpawnpoint = []
+        for (let i = 0; i < mapConstant.parcelSpawner.length; i++) {
+            if ((mapConstant.parcelSpawner[i].x==believes.me.x && mapConstant.parcelSpawner[i].y == believes.me.y) || astarDistance(mapConstant.parcelSpawner[i], believes.me,mapConstant.graph)!=0){
+                reachableSpawnpoint.push(mapConstant.parcelSpawner[i]);
+            }
+            else{
+                //add unreachable spawn points to the blacklist, so we ignore the parcels that spawn there
+                believes.blackList.spawnPoints.push(mapConstant.parcelSpawner[i]);
+                //after updating the heatmap also normalize again
+                believes.heatmap.delete(`t_${mapConstant.parcelSpawner[i].x}_${mapConstant.parcelSpawner[i].y}`);
+                let sum = 0;
+                believes.heatmap.forEach((value, key) => {
+                    sum += value.prob;
+                });
+                // update each prob such that currprob = currprob/sum
+                believes.heatmap.forEach((value, key) => {
+                    believes.heatmap.set(key, {...value, prob: value.prob / sum});
+                });
+            }
+        }
+        mapConstant.parcelSpawner = reachableSpawnpoint
+    }
+
 } )
 
 
@@ -149,6 +169,7 @@ client.onParcelsSensing( async ( perceived_parcels ) => {
     //keep only the parcels that are not carried by other agents (only me or no one), and also ignore the blacklisted parcels
     believes.parcels = perceived_parcels.filter( p => !believes.blackList.parcels.includes(p.id) && (p.carriedBy == null || p.carriedBy== believes.me.id ) ).map(p=> {return {...p,x:Math.round(p.x),y:Math.round(p.y)}})
     believes.parcels = believes.parcels.filter(p => p.reward > 0)//ignore parcels with negative reward
+    believes.parcels = believes.parcels.filter(p => !believes.blackList.spawnPoints.some(sp => sp.x == p.x && sp.y == p.y))//ignore parcels that are in the black list (since unreachable)
     if(logBelieves)
         Logger.logEvent(Logger.logType.BELIEVES,Logger.logLevels.INFO,"Parcels: "+JSON.stringify(believes.parcels))
 
@@ -198,7 +219,6 @@ client.onConfig( (config) => {
     if(logBelieves)
         Logger.logEvent(Logger.logType.BELIEVES,Logger.logLevels.INFO,"Config: "+JSON.stringify(believes.config))
 })
-
 
 async function agentLoop(){
     let agent = new Intention()

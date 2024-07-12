@@ -31,6 +31,7 @@ export class Intention{
         Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.INFO, `Parcels: ${JSON.stringify(believes.parcels)}`);
         if(communication.intentionQueue.length>0){
             Logger.logEvent(Logger.logType.COORDINATION, Logger.logLevels.INFO, `Fill the queue with the intention sent from the other agent, need to coordinate`);
+            this.queue = [] //reset the queue
             this.queue.push(...communication.intentionQueue)
             communication.intentionQueue = [] //clear the intention queue
         }
