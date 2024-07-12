@@ -74,7 +74,8 @@ export class Putdown extends Plan{
             //impossible to reach the target, i want to check if it is my friend that is blocking me, 
             //a put down cal be deliver into an uncreachble point which has not obstacle (but is due to the map), so we need to check if there is an obstacle amd if that obracle is our friend
             //if dont check an obstacle every time it is impossible we are assuming is our friend or due to an obstacle when it is not
-            if(otherAgent.id!="" && believes.agentsPosition.has(otherAgent.id) && obstacle){
+            //i want to coordinates only if there is only one delivery point left, otherwise i want to try other delivery points
+            if(believes.deliveryPoints.length == 1 && otherAgent.id!="" && believes.agentsPosition.has(otherAgent.id) && obstacle){
                 let agent = believes.agentsPosition.get(otherAgent.id);
                 let [_,x,y] = obstacle.split("_");
                 if(agent.x ==x && agent.y == y){//the agent blocking him is his friend
