@@ -302,7 +302,8 @@ export class Intention{
             for (let i = 0; i < availableDirections.length; i++) {  
                 let new_x = parseInt(agent.x) + availableDirections[i][0];
                 let new_y = parseInt(agent.y) + availableDirections[i][1];
-                if(mapConstant.map[new_x][new_y] != 0 && (new_x!=believes.me.x || new_y!=believes.me.y)){
+                //if the it is a coordinates inside the map and it is walkable and is not the position where i'm standing, the other agent can move in that direction
+                if(mapConstant.map[new_x][new_y] && mapConstant.map[new_x][new_y] != 0 && (new_x!=believes.me.x || new_y!=believes.me.y)){
                     Logger.logEvent(Logger.logType.COORDINATION, Logger.logLevels.INFO,`Found where ${otherAgent.id} can move: ${new_x},${new_y}`);
                     //i start filling the other agent's (B) coordination queue
                     /*
