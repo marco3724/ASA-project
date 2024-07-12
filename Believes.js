@@ -33,7 +33,8 @@ export const believes = {
   heatmap: new Map(), // maybe this should be somewhere else
   blackList: {
     parcels: [],
-    deliveryPoints: [],
+    deliveryPoints: [],// unreachable delivery points, if unreachable due to obstacle the delivery point will be remove within a certain timeout
+    spawnPoints: [],// unreachable spawn points
   }
 
 }
@@ -68,8 +69,8 @@ export const hyperParams = {
     max_retry: 50,
   },
   blackList: {
-    max_timeout: 30000,
-    min_timeout: 10000,
+    max_timeout: 1000,
+    min_timeout: 500,
   },
   max_carryingParcels:100,
   reasonable: 0.9,
