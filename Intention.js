@@ -8,20 +8,17 @@ import { sendBelief, otherAgent } from './Communication/communication.js';
 import { StandStill } from './Plans/StandStill.js';
 export class Intention{
     constructor(){
-        this.queue = [] //for sub intention
+        this.queue = [] //queue of intentions
     }
 
     /**
      * Function used to check whether the current parcel is the intention of the other agent
      * @param {*} parcel 
      */
-    isFriendlyFire(parcel) {
+    isFriendlyFire(target) {
+        //if the other agent is picking up the parcel, i don't want to pick up the same parcel
         if (otherAgent.intention.type === "pickup") {
-            if (parcel.id == otherAgent.intention.target.id) {
-                return true;
-            }
-        } else {
-            return false;
+            return target.id == otherAgent.intention.target.id
         }
     }
 
@@ -57,7 +54,7 @@ export class Intention{
             if (this.queue.length==0) //restart the original intention
                 intention.stop = false
             return intention; //return and remove the first intention in the queue
-        }
+        }//DELIVERY
         else if ( believes.parcels.filter(p => p.carriedBy === believes.me.id).length >=hyperParams.max_carryingParcels || //if i'm carrying too many parcels, deliver first
                 mustDeliver || //if the loss is more than the reward that i will get (from any parcel), i deliver the parcel that i'm carrying first
             ( 
@@ -69,42 +66,41 @@ export class Intention{
             Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Deliver parcel to ${nearestDelivery.x}, ${nearestDelivery.y}`);
             console.group()
             return new Putdown({ target: nearestDelivery },false,false);
-        } else if (believes.parcels.filter(p => p.carriedBy === null && p.carriedBy != believes.me.id && !this.isFriendlyFire(p)).length !== 0) { // if there are parcels which are not carried by anyone and that are not the intention of the other agent
+        } //PICK UP
+        else if (believes.parcels.filter(p => p.carriedBy === null && p.carriedBy != believes.me.id && !this.isFriendlyFire(p)).length !== 0) { // if there are parcels which are not carried by anyone and that are not the intention of the other agent
             let crowdness = 0
             let bestParcel = []
             //calculate the crowdness
-            believes.agentsPosition.forEach((agent) => {   // TODO will exclude the friends from the crowdness
-                //hyperParams.radius_distance*believes.config.MOVEMENT_DURATION
-                // the unseen paramter is updated for every step, 
-                console.log(agent)
-                // so we want to check the currently seen agent and the angent that we havent seen not to long ago (they may still be nearby)
-                if (agent.unseen<hyperParams.radius_distance) {
+            believes.agentsPosition.forEach((agent) => { 
+                // so we want to check the currently seen agent and the angent that we havent seen not to long ago (they may still be nearby) (exluding our friend)
+                if (agent.unseen<hyperParams.radius_distance && agent.id != otherAgent.id) {
                     crowdness += 1
                 }
             })
             console.log(crowdness)
             let intentionReason = ""
+            let filteredParcels = believes.parcels.filter(p => p.carriedBy === null && !this.isFriendlyFire(p))
             //if very crowded, i want to pick up the parcel with that is the nearest (need to be less pretentious)
-            //but there is alway a probability that even if crwoded, i want to pick up the parcel with the highest reward
-            let beingPretentious = Math.random()  //but there is alway a small probability that even if crowded, i want to pick up the parcel with the highest reward
+            //but there is alway a probability that even if crowded, i want to pick up the parcel with the highest reward
+            let beingPretentious = Math.random()  //but there is always a small probability that even if crowded, i want to pick up the parcel with the highest reward
             let reasonable = beingPretentious<hyperParams.reasonable//if i'm not enough pretentious i stay reasonable
             if (crowdness > hyperParams.crowdedThreshold && reasonable ) { 
                 intentionReason =  "Crowded, pick up the nearest parcel"
-                bestParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) => (astarDistance(believes.me, a,mapConstant.graph))- (astarDistance(believes.me, b,mapConstant.graph)))[0]
+                bestParcel = filteredParcels.sort((a, b) => (astarDistance(believes.me, a,mapConstant.graph))- (astarDistance(believes.me, b,mapConstant.graph)))[0]
             }
             else{
                 // if there is no reward decay and no variance, i want to pick up the parcel that is the nearest
                 if(believes.config.PARCEL_DECADING_INTERVAL=="infinite" && believes.config.PARCEL_REWARD_VARIANCE==0 ){
                     intentionReason =  `No reward decay and no variance, pick up the parcel that is the nearest parcel`
-                    bestParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) => (astarDistance(believes.me, a,mapConstant.graph))- (astarDistance(believes.me, b,mapConstant.graph)))[0]
+                    bestParcel = filteredParcels.sort((a, b) => (astarDistance(believes.me, a,mapConstant.graph))- (astarDistance(believes.me, b,mapConstant.graph)))[0]
                 }
                 else if(believes.config.PARCEL_DECADING_INTERVAL=="infinite" ){  //in there is no reward decay, i want to pick up the parcel with the highest reward without considering the distance
                     intentionReason =  `No reward decay, pick up the parcel with the highest reward`
-                    bestParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) =>b.reward-a.reward)[0]
+                    bestParcel = filteredParcels.sort((a, b) =>b.reward-a.reward)[0]
                 }
                 else{  // otherwise (not crowded with reward decay) i want to pick up the parcel with the highest reward when reaching that parcel
                     intentionReason = `pick up the parcel with the highest reward when reaching that parcel`
-                    bestParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) => 
+                    bestParcel = filteredParcels.sort((a, b) => 
                         (b.reward - astarDistance(believes.me, b,mapConstant.graph)* believes.config.rewardDecayRatio)
                         - 
                         (a.reward - astarDistance(believes.me, a,mapConstant.graph)* believes.config.rewardDecayRatio)
@@ -127,29 +123,38 @@ export class Intention{
             let parcelsToShare = believes.parcels.filter(p => p.id !== bestParcel.id && p.carriedBy === null);
             sendBelief("parcels", parcelsToShare);
             return new Pickup({ target: bestParcel },false,false)
-        } else {
-            /**
-             * Here im thinking that probably using a Map is not a good idea.
-             * "algorithmically" speaking, probably it would be better to use 
-             * some kind of fancy binary tree.
-             * 
-             * Also what happens if the heatmap is not ready yet?
-             */
-            if (believes.heatmap.size > 0) {
+        } else {//TARGET MOVE can't deliver or pick up any parcel, so I explore
+            let heatmapCopy = new Map(believes.heatmap)
+            //delete the target of the other agent from the heatmap (only if it contains more than one spawn point)
+            if(otherAgent?.intention?.type === "targetMove" && heatmapCopy.size >1){
+                let otherAgentIntention = otherAgent.intention.target
+                heatmapCopy.delete(`t_${otherAgentIntention.x}_${otherAgentIntention.y}`)
+                //normalize
+                let sum = 0;
+                heatmapCopy.forEach((value, key) => {
+                    sum += value.prob;
+                });
+                // update each prob such that currprob = currprob/sum
+                heatmapCopy.forEach((value, key) => {
+                    heatmapCopy.set(key, {...value, prob: value.prob / sum});
+                });
+            }
+            if (heatmapCopy.size > 0) {
                 let prob = Math.floor(Math.random() * 100);
                 // We leave a 5% chance to explore randomly
                 if (prob <= 5) {
                     Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Exploring randomly`);
-                    let keys = Array.from(believes.heatmap.keys());
+                    
+                    let keys = Array.from(heatmapCopy.keys());
                     let randomKey = keys[Math.floor(Math.random() * keys.length)];
-                    let target = believes.heatmap.get(randomKey);
+                    let target = heatmapCopy.get(randomKey);
                     Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Exploring to ${target.x}, ${target.y}`);
                     console.group();
                     return new TargetMove({ target: { x: target.x, y: target.y } },false,false);
                 } else {
 
                     // Cumulative probability
-                    const cumulativeSum = Array.from(believes.heatmap.values()).reduce((acc, obj) => {
+                    const cumulativeSum = Array.from(heatmapCopy.values()).reduce((acc, obj) => {
                         const newSum = acc.sum + obj.prob;
                         acc.cumulativeArray.push(newSum);
                         acc.sum = newSum;
@@ -161,56 +166,17 @@ export class Intention{
                     // Find the target, which has the probability higher than the threshold
                     for (let i = 0; i < cumulativeSum.length; i++) {
                         if (cumulativeSum[i] >= threshold) {
-                            target = Array.from(believes.heatmap.values())[i];
+                            target = Array.from(heatmapCopy.values())[i];
                             break;
                         }
                     }
-                    // console.log("cumulativeSum: ", cumulativeSum);
-                    // console.log("threshold: ", threshold);
-                    // console.log("target: ", target);
-
-                    
-
-
-
-                    // let sortMap = [...believes.heatmap.entries()].sort((a, b) => b[1].prob - a[1].prob);
-                    // let maxDiff = sortMap[0][1].prob - sortMap[sortMap.length - 1][1].prob;
-                    // let possibleTargets = []
-                    /**
-                     * if the difference between the highest and the lowest probability is less than the threshold
-                     * then just take the 5 farthest tiles from me, and select one of them randomly
-                     *  */ 
-                    // if (maxDiff < hyperParams.highDensityThreshold) {
-                    //     sortMap = sortMap.sort((a, b) => distance(believes.me, {x: b[1].x, y: b[1].y}) - distance(believes.me, {x: a[1].x, y: a[1].y}));
-                    //     sortMap.slice(0, 5).forEach((value) => {
-                    //         possibleTargets.push(value[1]);
-                    //     });
-                    // } else {
-                    //     let sortedHeatmap = new Map(sortMap);
-                    //     Logger.logEvent(Logger.logType.BELIEVES, Logger.logLevels.INFO, `Sorted heatmap: ${JSON.stringify([...sortedHeatmap.entries()].slice(0, 5))}`);
-                    //     const it = sortedHeatmap.values();
-                    //     let val = it.next();
-                    //     let maxCounter = val.value.prob;
-                    //     let excededThreshold = false;
-                    //     while (!val.done) {
-                    //         if (val.value.prob >= (maxCounter - hyperParams.counterThreshold)) {
-                    //             possibleTargets.push(val.value);
-                    //         } else {
-                    //             excededThreshold = true;
-                    //         }
-                    //         val = it.next();
-                    //     }
-                    // }
-                    
-                    //let random = Math.floor(Math.random() * possibleTargets.length);
-                    //let target = possibleTargets[random];
                     Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Exploring to ${target.x}, ${target.y}`);
                     console.group();
                     return new TargetMove({ target: { x: target.x, y: target.y } },false,false);
                 }
             }        
             let randomTile = mapConstant.parcelSpawner[Math.floor(Math.random() * mapConstant.parcelSpawner.length)];
-            Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `explore completely randomly  ${target.x}, ${target.y}`);
+            Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `explore completely randomly  ${randomTile.x}, ${randomTile.y}`);
             return new TargetMove({ target: randomTile},false,false);
         }
     }
@@ -245,11 +211,11 @@ export class Intention{
                 plan.stop = true
             }
 
-            //filter the parcel that are one block away from me and that are not the parcel that i'm trying to pick up and my plan (the packet that im trying to pick) is still far away (2 is one block away and pick up)
+            //filter the parcel that are one block away from me and that are not the parcel that i'm already trying to pick up and my plan (the packet that im trying to pick) is still far away (2 is one block away and pick up)
 
             let parcelsOnTheWay = believes.parcels.filter(p => p.carriedBy === null && p.id!== intention.target.id && astarDistance(believes.me, p,mapConstant.graph)<2 && plan.plan.length-plan.index>2)
             
-            parcelsOnTheWay = parcelsOnTheWay.filter(p1=>!this.queue.some(p=>p.intention.target.id===p1.id)) //if the parcel is already in the queue 
+            parcelsOnTheWay = parcelsOnTheWay.filter(p1=>!this.queue.some(p=>p.intention.target.id===p1.id && this.isFriendlyFire(p))) //filter if the parcel is already in the queue or is the intention of the other agent
             if(parcelsOnTheWay.length>0 && believes.parcels.filter(p =>p.carriedBy === believes.me.id)<=hyperParams.max_carryingParcels){ //if there are parcerls very near during my path i also want to pick them up, but only if im carrying less than the max carrying parcels
                 plan.stop = true
                 if(this.queue.length==0){//since i still want to achieve this, but after picking up the parcel that is on the way
@@ -301,7 +267,7 @@ export class Intention{
             for (let i = 0; i < availableDirections.length; i++) {  
                 let new_x = parseInt(agent.x) + availableDirections[i][0];
                 let new_y = parseInt(agent.y) + availableDirections[i][1];
-                //if the it is a coordinates inside the map and it is walkable and is not the position where i'm standing, the other agent can move in that direction
+                //if it is a coordinates inside the map and it is walkable and is not the position where i'm standing, the other agent can move in that direction
                 if(mapConstant.map[new_x][new_y] && mapConstant.map[new_x][new_y] != 0 && (new_x!=believes.me.x || new_y!=believes.me.y)){
                     Logger.logEvent(Logger.logType.COORDINATION, Logger.logLevels.INFO,`Found where ${otherAgent.id} can move: ${new_x},${new_y}`);
                     //i start filling the other agent's (B) coordination queue
@@ -344,7 +310,7 @@ export class Intention{
                     Logger.logEvent(Logger.logType.COORDINATION, Logger.logLevels.INFO,`Setting my coordination plan`);
 
 
-                    // i want to put down the parcel in the new position, where my friend has moved, and then move back so he can pick up the parcel
+                    // after he moved, i want to put down the parcel in the new position, where my friend has moved, and then move back so he can pick up the parcel
                     this.queue.push(new StandStill({ target: {x:x,y:y} },false,true))//da cambiare coordinate anche s enon usato
                     this.queue.push(new Putdown({ target: {x:x,y:y} },false,true)) 
                     this.queue.push(new TargetMove({ target: { x: believes.me.x, y: believes.me.y } },true,true))
