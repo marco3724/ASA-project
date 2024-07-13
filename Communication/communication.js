@@ -44,9 +44,6 @@ function handleMessage(id, name, msg, reply) {
         JSON.parse(msg.content).forEach(intention => {
             communication.intentionQueue.push(convertToPlanType(intention) );
         });
-        // console.log("COMMUNICATION INTENTION QUEUE");
-        // console.log(communication.intentionQueue);
-
     }
     if(msg.type === "awake") {
         Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Received awake message from ${name}`);

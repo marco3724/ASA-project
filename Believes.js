@@ -65,8 +65,8 @@ export const hyperParams = {
   min_reward: 15,
   crowdedThreshold: 1,
   retry:{
-    min_retry: 10,
-    max_retry: 50,
+    min_retry: 50,
+    max_retry: 100,
   },
   blackList: {
     max_timeout: 1000,
@@ -74,7 +74,5 @@ export const hyperParams = {
   },
   max_carryingParcels:100,
   reasonable: 0.9,
-  heatmap_decading: 1, // this param is used to decrease the probability of a cell in the heatmap
-  counterThreshold: 3,
-  highDensityThreshold: 2,
+  randomMoveChance: 5,
 }

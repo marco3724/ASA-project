@@ -40,7 +40,7 @@ export class Plan {
         } ],
         ['PICK-UP', async  (l)=> {
             let status = await client.pickup()
-            if(status && status.length>0){ //update the believes (because the believes are updated before the action is executed)
+            if(status && status.length>0){ //update the believes 
                 for(let i= 0; i< status.length;i++){
                     let index = believes.parcels.findIndex(p=>p.id==status[i].id)
                     if(index!==-1)
@@ -52,7 +52,7 @@ export class Plan {
         } ],
         [ 'PUT-DOWN', async  (l)=> {
             let status = await client.putdown() 
-            if(status && status.length>0){ //update the believes (because the believes are updated before the action is executed)
+            if(status && status.length>0){ //update the believes 
                 const statusIds = status.map(s => s.id);
                 believes.parcels = believes.parcels.filter(p => !statusIds.includes(p.id));
             }

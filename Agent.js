@@ -31,7 +31,6 @@ client.onMap((width, height, tiles) => {
          */
         if (tile.parcelSpawner) {
             mapConstant.parcelSpawner.push({x: tile.x, y: tile.y});
-            // believes.heatmap.set(`t_${tile.x}_${tile.y}`, {x: tile.x, y: tile.y, currentParcelId: null, prob: 1});
         }
     });
 
@@ -82,10 +81,6 @@ client.onMap((width, height, tiles) => {
             }
         }
     }
-    // maybe here we could delete the last space ???
-    // console.log("PDDL MAP: ", mapConstant.pddlMapObjects);
-    // console.log("PDDL NEIGHBORS: ", mapConstant.pddlNeighbors);
-    // console.log("PDDL DELIVERY POINTS: ", mapConstant.pddlDeliveryPoints);
 
 
     // is this necessary?
@@ -211,10 +206,7 @@ client.onConfig( (config) => {
     initCommunication(client);
     believes.config.PARCEL_REWARD_VARIANCE = parseInt(config.PARCEL_REWARD_VARIANCE) //sometimes is a string
     believes.config.rewardDecayRatio = 0 // if the reward decay is infinite, the reward will never decrease so i don't want to consider the distance (in case there is not crowd)
-    if(believes.config.PARCEL_DECADING_INTERVAL=="infinite")
-        //min_reward = 0 TODO
-        console.log("a caso")
-    else
+    if(believes.config.PARCEL_DECADING_INTERVAL!="infinite")
         believes.config.rewardDecayRatio = config.MOVEMENT_DURATION/(config.PARCEL_DECADING_INTERVAL.split("s")[0] *1000) //cost of moving one step (for each step how much the reward decrease ex movDuration 1s and decadingInterval =2, then the reward decrease of 0.5 for each step)
     if(logBelieves)
         Logger.logEvent(Logger.logType.BELIEVES,Logger.logLevels.INFO,"Config: "+JSON.stringify(believes.config))
@@ -225,8 +217,7 @@ async function agentLoop(){
     Plan.domain = await readFile('./domain.pddl' );
     await new Promise((resolve) => setTimeout(resolve, 100));
     while(true){
-        let intention = agent.generateAndFilterOptions();
-        // send the intention to the other agent
+        let intention = agent.generateAndFilterOptions();        
         await sendIntention(intention.type, intention.target);
         await intention.generatePlan();
         agent.revise(intention);

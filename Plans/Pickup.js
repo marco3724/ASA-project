@@ -117,15 +117,6 @@ export class Pickup extends Plan{
         }
     }
 
-    // async execute(){
-    //     await Plan.exec(this.plan);
-    // }
-    
-    // async replan() {
-    // //     let action = new TargetMove(this.intention);
-    // //    return 
-    // }
-
     get target() {
         return this.intention.target;
     }

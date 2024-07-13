@@ -54,7 +54,7 @@ export class Putdown extends Plan{
         );
 
         let problem = pddlProblem.toPddlString();
-        //Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, "Problem: "+problem);
+        Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.DEBUG, "Problem: "+problem);
         console.groupCollapsed("Generating plan");
         if (launchConfig.offLineSolver) {
             let action = "PUT-DOWN";
@@ -72,15 +72,7 @@ export class Putdown extends Plan{
             Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO,message);
 
             //impossible to reach the target, i want to check if it is my friend that is blocking me, 
-            //a put down cal be deliver into an uncreachble point which has not obstacle (but is due to the map), so we need to check if there is an obstacle amd if that obracle is our friend
-            //if dont check an obstacle every time it is impossible we are assuming is our friend or due to an obstacle when it is not
             //i want to coordinates only if there is only one delivery point left, otherwise i want to try other delivery points
-            console.log("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB")
-            console.log(believes.deliveryPoints.length)
-            console.log(otherAgent.id)
-            console.log(believes.agentsPosition.has(otherAgent.id))
-            console.log(obstacle)
-            console.log("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBVVVVVVBB")
             if(believes.deliveryPoints.length == 1 && otherAgent.id!="" && believes.agentsPosition.has(otherAgent.id) && obstacle){
                 let agent = believes.agentsPosition.get(otherAgent.id);
                 let [_,x,y] = obstacle.split("_");
@@ -92,42 +84,6 @@ export class Putdown extends Plan{
                     }
                 }
             }
-
-            // if(otherAgent.id!="" && believes.agentsPosition.has(otherAgent.id)){
-            //     let agent = believes.agentsPosition.get(otherAgent.id);
-            //     let [_,x,y] = obstacle.split("_");
-            //     if(agent.x ==x && agent.y == y){
-            //         Logger.logEvent(Logger.logType.PLAN, Logger.logLevels.INFO,`The target is blocked by my friend ${otherAgent.id}`);
-            //         //send a message to the other agent to coordinate
-            //         let availableDirections = [[0,-1],[0,1],[1,0],[-1,0]];
-            //         for (let i = 0; i < availableDirections.length; i++) {  
-            //             let new_x = parseInt(agent.x) + availableDirections[i][0];
-            //             let new_y = parseInt(agent.y) + availableDirections[i][1];
-            //             if(mapConstant.map[x][y] != 0){
-                            
-            //                 let reply = await client.ask(otherAgent.id, {
-            //                     type: "coordination",
-            //                     senderId: client.id,
-            //                     content: [
-            //                         new TargetMove({target: { x: new_x, y: new_y }}),
-
-            //                     ]
-            //                 });
-
-            //                 break;
-            //             }
-            //         }
-            //         mapConstant.map[agent.x][parseInt(y)] = 0;//remove the obstacle
-            //         client.say(otherAgent.id, {
-            //             type: "coordination",
-            //             senderId: client.id,
-            //             content: [
-
-            //             ]
-            //         });
-            //     }   
-            // }
-
 
 
             //add the delivery point to the black list

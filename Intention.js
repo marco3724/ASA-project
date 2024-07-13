@@ -35,18 +35,19 @@ export class Intention{
         //calculate if it is worth to deliver the parcel that i'm carrying (this is just one of the condition)
         let mustDeliver = false
         if(believes.parcels.filter(p => p.carriedBy === null).length>0){
-        let highestRewardParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) => 
-            (b.reward - astarDistance(believes.me, b,mapConstant.graph)* believes.config.rewardDecayRatio)
-            - 
-            (a.reward - astarDistance(believes.me, a,mapConstant.graph)* believes.config.rewardDecayRatio)
-        )[0]
-    
-        let distanceFromParcel = astarDistance(believes.me, highestRewardParcel,mapConstant.graph)
-        let loss = believes.parcels.filter(p => p.carriedBy === believes.me.id).length * believes.config.rewardDecayRatio * distanceFromParcel
-       
-        //i deliver the parcels that i'm carrying  if the loss is more than the reward that i will get 
-        mustDeliver = loss> highestRewardParcel.reward - believes.config.rewardDecayRatio * distanceFromParcel
+            let highestRewardParcel = believes.parcels.filter(p => p.carriedBy === null).sort((a, b) => 
+                (b.reward - astarDistance(believes.me, b,mapConstant.graph)* believes.config.rewardDecayRatio)
+                - 
+                (a.reward - astarDistance(believes.me, a,mapConstant.graph)* believes.config.rewardDecayRatio)
+            )[0]
+        
+            let distanceFromParcel = astarDistance(believes.me, highestRewardParcel,mapConstant.graph)
+            let loss = believes.parcels.filter(p => p.carriedBy === believes.me.id).length * believes.config.rewardDecayRatio * distanceFromParcel
+        
+            //i deliver the parcels that i'm carrying  if the loss is more than the reward that i will get 
+            mustDeliver = loss> highestRewardParcel.reward - believes.config.rewardDecayRatio * distanceFromParcel
         }
+
         if (this.queue.length > 0) {
             console.group()
             let intention = this.queue.shift()
@@ -56,11 +57,11 @@ export class Intention{
             return intention; //return and remove the first intention in the queue
         }//DELIVERY
         else if ( believes.parcels.filter(p => p.carriedBy === believes.me.id).length >=hyperParams.max_carryingParcels || //if i'm carrying too many parcels, deliver first
-                mustDeliver || //if the loss is more than the reward that i will get (from any parcel), i deliver the parcel that i'm carrying first
+                mustDeliver || //if the loss is more than the reward that i will get (from any parcel), i deliver the parcels that i'm carrying first
             ( 
             believes.parcels.some(p => p.carriedBy === believes.me.id) // if i have some package i may want to deliver
             && believes.parcels.filter(p => p.carriedBy === null && astarDistance(believes.me, p,mapConstant.graph)<hyperParams.radius_distance).length==0 //if there are no package near me i deliver, otherwise i pick up
-            && believes.deliveryPoints.length > 0) //if there are no non blocked delivery points, i won't deliver for now, i could also reinstate the blocked delivery points, but if the reinstated delivery point is blocked again i would have a loop and basically do nothing ( so we need to wait the blacklist of the delivery points), so if there are no delivery point avbailable is better to pick other packet
+            && believes.deliveryPoints.length > 0) //if there are no non blocked delivery points, i won't deliver for now
         ) { 
             let nearestDelivery = believes.deliveryPoints.sort((a, b) => astarDistance(believes.me, a,mapConstant.graph) - astarDistance(believes.me, b,mapConstant.graph))[0]
             Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Deliver parcel to ${nearestDelivery.x}, ${nearestDelivery.y}`);
@@ -77,7 +78,7 @@ export class Intention{
                     crowdness += 1
                 }
             })
-            console.log(crowdness)
+          
             let intentionReason = ""
             let filteredParcels = believes.parcels.filter(p => p.carriedBy === null && !this.isFriendlyFire(p))
             //if very crowded, i want to pick up the parcel with that is the nearest (need to be less pretentious)
@@ -110,13 +111,6 @@ export class Intention{
                     intentionReason = `Wish me Luck!, ${intentionReason} |${beingPretentious}`
             }
 
-
-            /**
-             * A possible improvement could be to select the parcel
-             * which is deliverable
-             * By deliverable I mean that the parcel should have enough reward to be worth
-             * to be delivered (i.e. it doesnt make sense to go pick up a parcel which will dissapear before reaching the delivery point)
-             */
             Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Pick up parcel from ${bestParcel.x}, ${bestParcel.y} | Reason: ${intentionReason}`);
             console.group()
             // filter the parcels removing the one chose to pick up and the one that are already carried by someone
@@ -142,7 +136,7 @@ export class Intention{
             if (heatmapCopy.size > 0) {
                 let prob = Math.floor(Math.random() * 100);
                 // We leave a 5% chance to explore randomly
-                if (prob <= 5) {
+                if (prob <= hyperParams.randomMoveChance) {
                     Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `Exploring randomly`);
                     
                     let keys = Array.from(heatmapCopy.keys());
@@ -192,7 +186,7 @@ export class Intention{
                 this.reviseTargetMove(intention)
         }
         else{
-            Logger.logEvent(Logger.logType.COORDINATION, Logger.logLevels.INFO,'Coordination, needs to be concetrated! No revise for pickup putdown and target move')
+            Logger.logEvent(Logger.logType.COORDINATION, Logger.logLevels.INFO,'Coordination, needs to be focused! No revise for pickup putdown and target move')
         }
         if(intention instanceof StandStill)
             this.reviseStandStill(intention)
@@ -207,7 +201,7 @@ export class Intention{
                 plan.stop = true
             //if i can't sense the parcel and that parcel is within my view, it mean that is gone or someone took it, so stop, but if it is outside of my view the parcel may still be there
             if (!believes.parcels.some(p=>(p.id==intention.target.id)) && 
-            astarDistance(intention.target,believes.me,mapConstant.graph)<believes.config.PARCELS_OBSERVATION_DISTANCE-1){ //this solve the problem of the parcel that is outside of the view once i have the intention to pick it
+            astarDistance(intention.target,believes.me,mapConstant.graph)<believes.config.PARCELS_OBSERVATION_DISTANCE-1){ 
                 plan.stop = true
             }
             
@@ -220,7 +214,7 @@ export class Intention{
             let parcelsOnTheWay = believes.parcels.filter(p => p.carriedBy === null && p.id!== intention.target.id && astarDistance(believes.me, p,mapConstant.graph)<2 && plan.plan.length-plan.index>2)
             
             parcelsOnTheWay = parcelsOnTheWay.filter(p1=>!this.queue.some(p=>p.intention.target.id===p1.id && !this.isFriendlyFire(p))) //filter if the parcel is already in the queue or is the intention of the other agent
-            if(parcelsOnTheWay.length>0 && believes.parcels.filter(p =>p.carriedBy === believes.me.id)<=hyperParams.max_carryingParcels){ //if there are parcerls very near during my path i also want to pick them up, but only if im carrying less than the max carrying parcels
+            if(parcelsOnTheWay.length>0 && believes.parcels.filter(p =>p.carriedBy === believes.me.id)<=hyperParams.max_carryingParcels){ //if there are parcels very near during my path i also want to pick them up, but only if im carrying less than the max carrying parcels
                 plan.stop = true
                 if(this.queue.length==0){//since i still want to achieve this, but after picking up the parcel that is on the way
                     this.queue.push(plan)
@@ -234,10 +228,10 @@ export class Intention{
             //if i'm carrying some parcel and there is a delivery point on my path, i want to deliver those parcels first
             if(deliveryOnPath.length>0 && carryingSomeParcel.length>0){ 
                 plan.stop = true
-                if(this.queue.length==0){//since i still want to achieve this, but af
+                if(this.queue.length==0){//since i still want to achieve this, but after picking up the parcel that is on the way
                     this.queue.push(plan)
                 } 
-                console.log("DELIVERY ON PATH")
+
                 let nearestDeliveryPoint = deliveryOnPath.sort((a, b) => astarDistance(believes.me, a,mapConstant.graph) - astarDistance(believes.me, b,mapConstant.graph))[0]
                 this.queue.unshift(new Putdown({target: nearestDeliveryPoint},false,false))
 
@@ -254,7 +248,7 @@ export class Intention{
             if (!believes.parcels.some(p=>p.carriedBy==believes.me.id)) //if i'm not carrying any parcel anymore
                 plan.stop = true
         
-            if (believes.parcels.filter(p => p.carriedBy === believes.me.id).length < hyperParams.max_carryingParcels && //allowed to stop the putdown if i'm carrying too many parcels
+            if (believes.parcels.filter(p => p.carriedBy === believes.me.id).length < hyperParams.max_carryingParcels && //i am allowed to stop the put down only if i'm not carrying too many parcels(If i exceed the intention is to force, so we can't revise that)
                  believes.parcels.filter(p => p.carriedBy === null &&
                  astarDistance(believes.me, p,mapConstant.graph)<hyperParams.radius_distance).length!=0 && 
                  plan.plan.length-plan.index>hyperParams.radius_distance) //if a parcel is near me when i try to deliver i want to pick that parcel 
@@ -315,10 +309,10 @@ export class Intention{
 
 
                     // after he moved, i want to put down the parcel in the new position, where my friend has moved, and then move back so he can pick up the parcel
-                    this.queue.push(new StandStill({ target: {x:x,y:y} },false,true))//da cambiare coordinate anche s enon usato
+                    this.queue.push(new StandStill({ target: {x:x,y:y} },false,true))
                     this.queue.push(new Putdown({ target: {x:x,y:y} },false,true)) 
                     this.queue.push(new TargetMove({ target: { x: believes.me.x, y: believes.me.y } },true,true))
-                    this.queue.push(new StandStill({ target: {x:x,y:y} },false,false))//da cambiare coordinate anche s enon usato
+                    this.queue.push(new StandStill({ target: {x:x,y:y} },false,false))
 
                     break;
                 }
@@ -345,7 +339,7 @@ export class Intention{
         const {intention} = plan
         Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO,'Starting to revise stand still')
         while ( !plan.stop ) {
-            if(communication.shouldTheAgentAwake){
+            if(communication.shouldTheAgentAwake){ //received a wake up message
                 plan.stop = true //the agent need to awake
                 communication.shouldTheAgentAwake = false
             }
