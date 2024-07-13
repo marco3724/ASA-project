@@ -8,7 +8,7 @@ let agentType = {
     LEADING: 0,
     COMPLIANT:  1
 }
-let agentRole = agentType.LEADING;
+believes.agentRole = agentType.LEADING;
 
 let otherAgent = {
     id: "",
@@ -21,8 +21,8 @@ let otherAgent = {
 function handleMessage(id, name, msg, reply) {
     if (msg.type === "handshake" && msg.content === "Hello Baozi C") {
         otherAgent.id = id;
-        agentRole = agentType.COMPLIANT;
-        Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Received handshake from ${name} | setted role as ${agentRole ? "COMPLIANT" : "LEADING"}`);
+        believes.agentRole = agentType.COMPLIANT;
+        Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Received handshake from ${name} | setted role as ${believes.agentRole ? "COMPLIANT" : "LEADING"}`);
         client.say(otherAgent.id, {
             type: "ack",
             senderId: client.id,
@@ -31,7 +31,7 @@ function handleMessage(id, name, msg, reply) {
     }
     
     if (msg.type === "ack" && msg.content === "Hello Baozi M") {
-        Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Received ack message from ${name} | setted role as ${agentRole ? "COMPLIANT" : "LEADING"}`);
+        Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Received ack message from ${name} | setted role as ${believes.agentRole ? "COMPLIANT" : "LEADING"}`);
         otherAgent.id = msg.senderId;
     }
 
@@ -86,7 +86,7 @@ function initCommunication(deliverooClient) {
     client = deliverooClient;
     client.onMsg(handleMessage);
 
-    if (agentRole == agentType.LEADING) {
+    if (believes.agentRole == agentType.LEADING) {
         // send a broadcast message until the other agent responds
         let intervalId = setInterval(async () => {
             if (otherAgent.id === "") {
@@ -107,7 +107,6 @@ function initCommunication(deliverooClient) {
  * @param {Object} tg the target of the intention
  */
 async function sendIntention(t, tg) {
-    console.log("SENDING INTENTION TO OTHER AGENT", t, tg)
     Logger.logEvent(Logger.logType.COMMUNICATION, Logger.logLevels.INFO, `Sending intention to ${otherAgent.id}`);
     if (client) {
         await client.say(otherAgent.id, {
@@ -152,5 +151,6 @@ export {
     otherAgent,
     sendIntention,
     sendBelief,
-    notifyToAwake
+    notifyToAwake,
+    agentType
 };

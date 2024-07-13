@@ -4,7 +4,7 @@ import { Putdown } from './Plans/Putdown.js';
 import { TargetMove } from './Plans/TargetMove.js'
 import { distance,astarDistance } from './Utility/utility.js';
 import { Logger } from './Utility/Logger.js';
-import { sendBelief, otherAgent } from './Communication/communication.js';
+import { sendBelief, otherAgent,agentType } from './Communication/communication.js';
 import { StandStill } from './Plans/StandStill.js';
 export class Intention{
     constructor(){
@@ -210,12 +210,16 @@ export class Intention{
             astarDistance(intention.target,believes.me,mapConstant.graph)<believes.config.PARCELS_OBSERVATION_DISTANCE-1){ //this solve the problem of the parcel that is outside of the view once i have the intention to pick it
                 plan.stop = true
             }
+            
+            //if the other agent is trying to pick up that parcel, and he is the leading, i will stop
+            if(this.isFriendlyFire(otherAgent.intention) && believes.agentRole==agentType.COMPLIANT){
+                plan.stop = true
+            }
 
             //filter the parcel that are one block away from me and that are not the parcel that i'm already trying to pick up and my plan (the packet that im trying to pick) is still far away (2 is one block away and pick up)
-
             let parcelsOnTheWay = believes.parcels.filter(p => p.carriedBy === null && p.id!== intention.target.id && astarDistance(believes.me, p,mapConstant.graph)<2 && plan.plan.length-plan.index>2)
             
-            parcelsOnTheWay = parcelsOnTheWay.filter(p1=>!this.queue.some(p=>p.intention.target.id===p1.id && this.isFriendlyFire(p))) //filter if the parcel is already in the queue or is the intention of the other agent
+            parcelsOnTheWay = parcelsOnTheWay.filter(p1=>!this.queue.some(p=>p.intention.target.id===p1.id && !this.isFriendlyFire(p))) //filter if the parcel is already in the queue or is the intention of the other agent
             if(parcelsOnTheWay.length>0 && believes.parcels.filter(p =>p.carriedBy === believes.me.id)<=hyperParams.max_carryingParcels){ //if there are parcerls very near during my path i also want to pick them up, but only if im carrying less than the max carrying parcels
                 plan.stop = true
                 if(this.queue.length==0){//since i still want to achieve this, but after picking up the parcel that is on the way
