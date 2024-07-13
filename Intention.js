@@ -1,7 +1,6 @@
 import { believes, client, communication, hyperParams, mapConstant } from './Believes.js';
 import { Pickup } from './Plans/Pickup.js';
 import { Putdown } from './Plans/Putdown.js';
-import {RandomMove} from './Plans/RandomMove.js'
 import { TargetMove } from './Plans/TargetMove.js'
 import { distance,astarDistance } from './Utility/utility.js';
 import { Logger } from './Utility/Logger.js';
@@ -210,8 +209,9 @@ export class Intention{
                     return new TargetMove({ target: { x: target.x, y: target.y } },false,false);
                 }
             }        
-            console.log("NON VA BENE")
-            return new RandomMove();
+            let randomTile = mapConstant.parcelSpawner[Math.floor(Math.random() * mapConstant.parcelSpawner.length)];
+            Logger.logEvent(Logger.logType.INTENTION, Logger.logLevels.INFO, `explore completely randomly  ${target.x}, ${target.y}`);
+            return new TargetMove({ target: randomTile},false,false);
         }
     }
 
