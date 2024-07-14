@@ -20,7 +20,7 @@
 import { DeliverooApi } from "@unitn-asa/deliveroo-js-client";
 export const client = new DeliverooApi(
     "http://localhost:8080/",
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjcyZDI4M2VlMjU3IiwibmFtZSI6ImNpYW8iLCJpYXQiOjE3MTUxNjA5NzF9.me_Fvg-V48fiYGQLPVJtShxX6kjNkiMAo2E2qjdXw-8'
+    ""
   );
 export const believes = {
   parcels: [],

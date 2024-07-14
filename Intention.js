@@ -214,7 +214,7 @@ export class Intention{
             let parcelsOnTheWay = believes.parcels.filter(p => p.carriedBy === null && p.id!== intention.target.id && astarDistance(believes.me, p,mapConstant.graph)<2 && plan.plan.length-plan.index>2)
             
             parcelsOnTheWay = parcelsOnTheWay.filter(p1=>!this.queue.some(p=>p.intention.target.id===p1.id && !this.isFriendlyFire(p))) //filter if the parcel is already in the queue or is the intention of the other agent
-            if(parcelsOnTheWay.length>0 && believes.parcels.filter(p =>p.carriedBy === believes.me.id)<=hyperParams.max_carryingParcels){ //if there are parcels very near during my path i also want to pick them up, but only if im carrying less than the max carrying parcels
+            if(parcelsOnTheWay.length>0 && believes.parcels.filter(p =>p.carriedBy === believes.me.id)<hyperParams.max_carryingParcels){ //if there are parcels very near during my path i also want to pick them up, but only if im carrying less than the max carrying parcels
                 plan.stop = true
                 if(this.queue.length==0){//since i still want to achieve this, but after picking up the parcel that is on the way
                     this.queue.push(plan)
